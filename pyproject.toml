@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
   'aiida-core>=2.3',
-  'aiida-quantumespresso>=4.5',
+  'aiida-quantumespresso>=4.5'
 ]
 dynamic = ['description', 'version']
 keywords = ['aiida', 'workflows', 'core-level', 'spectroscopy']
@@ -35,6 +35,9 @@ requires-python = '>=3.9'
 [project.entry-points.'aiida.data']
 
 [project.entry-points.'aiida.parsers']
+
+[project.entry-points."aiidalab_qe.properties"]
+"qeapp.xps" = "aiida_qe_xspec.gui.xps:xps"
 
 [project.optional-dependencies]
 dev = [
