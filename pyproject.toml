@@ -31,13 +31,18 @@ readme = 'README.md'
 requires-python = '>=3.9'
 
 [project.entry-points.'aiida.calculations']
+"xspec.xspectracalculation" = "aiida_qe_xspec.calculations.xspectra:XspectraCalculation"
 
 [project.entry-points.'aiida.data']
 
 [project.entry-points.'aiida.parsers']
+"xspec.xspectra" = "aiida_qe_xspec.parsers.xspectra:XspectraParser"
 
 [project.entry-points.'aiida.workflows']
 'xspec.xps' = 'aiida_qe_xspec.workflows.xps:XpsWorkChain'
+"xspec.xspectra.base" = "aiida_qe_xspec.workflows.xspectra.base:XspectraBaseWorkChain"
+"xspec.xspectra.core" = "aiida_qe_xspec.workflows.xspectra.base:XspectraCoreWorkChain"
+"xspec.xspectra.crystal" = "aiida_qe_xspec.workflows.xspectra.base:XspectraCrystalWorkChain"
 
 [project.entry-points."aiidalab_qe.properties"]
 "qeapp.xps" = "aiida_qe_xspec.gui.xps:xps"
