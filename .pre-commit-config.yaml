@@ -31,18 +31,3 @@ repos:
     args: [--autofix]
   - id: pretty-format-yaml
     args: [--autofix]
-
-- repo: local
-  hooks:
-  - id: mypy
-    name: mypy
-    entry: mypy
-    language: python
-    args: [--config-file=pyproject.toml]
-    types: [python]
-    require_serial: true
-    pass_filenames: true
-    files: >-
-      (?x)^(
-        src/.*py|
-      )$
