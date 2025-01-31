@@ -12,7 +12,7 @@ from aiida.engine import ToContext, WorkChain, if_
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 from aiida_pseudo.data.pseudo import UpfData
-from aiida_quantumespresso.calculations.functions.xspectra.get_xps_spectra import get_spectra_by_element
+from aiida_qe_xspec.calculations.functions.xspectra.get_xps_spectra import get_spectra_by_element
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recursive_merge
 
