@@ -9,23 +9,23 @@ from .workchain import workchain_and_builder
 
 
 class XpsPluginOutline(PluginOutline):
-    title = "X-ray photoelectron spectroscopy (XPS)"
+    title = 'X-ray photoelectron spectroscopy (XPS)'
 
 
 xps = {
-    "outline": XpsPluginOutline,
-    "structure_examples": structure_examples,
-    "configuration": {
-        "panel": XpsConfigurationSettingsPanel,
-        "model": XpsConfigurationSettingsModel,
+    'outline': XpsPluginOutline,
+    'structure_examples': structure_examples,
+    'configuration': {
+        'panel': XpsConfigurationSettingsPanel,
+        'model': XpsConfigurationSettingsModel,
     },
-    "resources": {
-        "panel": XpsResourceSettingsPanel,
-        "model": XpsResourceSettingsModel,
+    'resources': {
+        'panel': XpsResourceSettingsPanel,
+        'model': XpsResourceSettingsModel,
     },
-    "result": {
-        "panel": XpsResultsPanel,
-        "model": XpsResultsModel,
+    'result': {
+        'panel': XpsResultsPanel,
+        'model': XpsResultsModel,
     },
-    "workchain": workchain_and_builder,
+    'workchain': workchain_and_builder,
 }

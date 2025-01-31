@@ -10,17 +10,17 @@ from aiidalab_qe.common.panel import (
 class XpsResourceSettingsModel(PluginResourceSettingsModel):
     """Model for the XPS plugin."""
 
-    title = "XPS"
-    identifier = "xps"
+    title = 'XPS'
+    identifier = 'xps'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_models(
             {
-                "pw": PwCodeModel(
-                    name="pw.x",
-                    description="pw.x",
-                    default_calc_job_plugin="quantumespresso.pw",
+                'pw': PwCodeModel(
+                    name='pw.x',
+                    description='pw.x',
+                    default_calc_job_plugin='quantumespresso.pw',
                 ),
             }
         )
