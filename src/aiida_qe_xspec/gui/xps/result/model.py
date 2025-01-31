@@ -1,22 +1,21 @@
 import traitlets as tl
-
 from aiidalab_qe.common.panel import ResultsModel
 
 from .utils import export_xps_data, xps_spectra_broadening
 
 
 class XpsResultsModel(ResultsModel):
-    title = "XPS"
-    identifier = "xps"
+    title = 'XPS'
+    identifier = 'xps'
 
     spectra_type_options = tl.List(
         trait=tl.List(tl.Unicode()),
         default_value=[
-            ["Chemical shift", "chemical_shift"],
-            ["Binding energy", "binding_energy"],
+            ['Chemical shift', 'chemical_shift'],
+            ['Binding energy', 'binding_energy'],
         ],
     )
-    spectra_type = tl.Unicode("chemical_shift")
+    spectra_type = tl.Unicode('chemical_shift')
     gamma = tl.Float(0.1)
     sigma = tl.Float(0.1)
     intensity = tl.Float(1.0)
@@ -33,7 +32,7 @@ class XpsResultsModel(ResultsModel):
     equivalent_sites_data = {}
     experimental_data = None
 
-    _this_process_label = "XpsWorkChain"
+    _this_process_label = 'XpsWorkChain'
 
     def update_spectrum_options(self):
         outputs = self._get_child_outputs()
@@ -42,17 +41,17 @@ class XpsResultsModel(ResultsModel):
             self.binding_energies,
             self.equivalent_sites_data,
         ) = export_xps_data(outputs)
-        options = [key.split("_")[0] for key in self.chemical_shifts.keys()]
+        options = [key.split('_')[0] for key in self.chemical_shifts.keys()]
         self.spectrum_options = options
         self.spectrum = options[0] if options else None
 
     def get_data(self):
-        if self.spectra_type == "chemical_shift":
+        if self.spectra_type == 'chemical_shift':
             points = self.chemical_shifts
-            x_axis_label = "Chemical Shift (eV)"
+            x_axis_label = 'Chemical Shift (eV)'
         else:
             points = self.binding_energies
-            x_axis_label = "Binding Energy (eV)"
+            x_axis_label = 'Binding Energy (eV)'
 
         self.spectra = xps_spectra_broadening(
             points,
@@ -64,14 +63,14 @@ class XpsResultsModel(ResultsModel):
 
         data = [
             {
-                "x": d[0],
-                "y": d[1],
-                "site": site,
+                'x': d[0],
+                'y': d[1],
+                'site': site,
             }
             for site, d in self.spectra[self.spectrum].items()
         ]
 
-        fill_type = "tozeroy" if self.fill else None
+        fill_type = 'tozeroy' if self.fill else None
 
         return data, x_axis_label, fill_type
 
@@ -80,8 +79,8 @@ class XpsResultsModel(ResultsModel):
         import pandas as pd
 
         uploaded_file = next(iter(data.values()))
-        content = uploaded_file["content"]
-        content_str = content.decode("utf-8")
+        content = uploaded_file['content']
+        content_str = content.decode('utf-8')
 
         from io import StringIO
 
@@ -89,7 +88,7 @@ class XpsResultsModel(ResultsModel):
 
         self.experimental_data = df
         # Calculate an initial guess for the intensity factor
-        total = self.spectra[self._model.spectrum]["total"]
+        total = self.spectra[self._model.spectrum]['total']
         # Align the max value of the total spectra with the max value of the experimental data
         max_exp = max(self.experimental_data[1])
         max_total = max(total[1])
