@@ -36,6 +36,9 @@ requires-python = '>=3.9'
 
 [project.entry-points.'aiida.parsers']
 
+[project.entry-points."aiidalab_qe.properties"]
+"xps" = "aiida_qe_xspec.gui.xps:xps"
+
 [project.optional-dependencies]
 dev = [
   'mypy==1.6.1',
