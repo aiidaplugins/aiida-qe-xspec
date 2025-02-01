@@ -25,7 +25,7 @@ dependencies = [
 ]
 dynamic = ['description', 'version']
 keywords = ['aiida', 'workflows', 'core-level', 'spectroscopy']
-license = {file = 'LICENSE.txt'}
+license = {file = 'LICENSE'}
 name = 'aiida-qe-xspec'
 readme = 'README.md'
 requires-python = '>=3.9'
