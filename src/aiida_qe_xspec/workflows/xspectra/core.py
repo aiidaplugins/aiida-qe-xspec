@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Workchain to compute the X-ray absorption spectrum for a given structure.
 
 Uses QuantumESPRESSO pw.x and xspectra.x, requires ``aiida-shell`` to run ``upf2plotcore.sh``.

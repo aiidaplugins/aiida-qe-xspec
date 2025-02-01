@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CalcFunction to analyse the symmetry properties of a crystal structure and its atomic sites.
 
 Returns a supercell with a marked absorbing atom for each symmetrically non-equivalent site in the system.

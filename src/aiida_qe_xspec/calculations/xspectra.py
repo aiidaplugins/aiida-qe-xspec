@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Classes and methods for running xspectra.x with AiiDA."""
 
 import os
