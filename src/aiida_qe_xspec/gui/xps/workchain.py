@@ -6,7 +6,7 @@ from aiidalab_qe.utils import (
     set_component_resources,
 )
 
-XpsWorkChain = WorkflowFactory('quantumespresso.xps')
+XpsWorkChain = WorkflowFactory('xspec.xps')
 
 # supercell min parameter for different protocols
 supercell_min_parameter_map = {

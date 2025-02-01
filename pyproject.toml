@@ -45,7 +45,7 @@ requires-python = '>=3.9'
 "xspec.xspectra.crystal" = "aiida_qe_xspec.workflows.xspectra.base:XspectraCrystalWorkChain"
 
 [project.entry-points."aiidalab_qe.properties"]
-"qeapp.xps" = "aiida_qe_xspec.gui.xps:xps"
+"xps" = "aiida_qe_xspec.gui.xps:xps"
 
 [project.optional-dependencies]
 dev = [
