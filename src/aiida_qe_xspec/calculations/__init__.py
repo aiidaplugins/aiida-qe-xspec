@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base `CalcJob` for implementations for pw.x and cp.x of Quantum ESPRESSO."""
 import abc
 import copy
@@ -19,8 +18,8 @@ from aiida_quantumespresso.data.hubbard_structure import HubbardStructureData
 from aiida_quantumespresso.utils.convert import convert_input_to_namelist_entry
 from aiida_quantumespresso.utils.hubbard import HubbardUtils
 
-from .base import CalcJob
-from .helpers import QEInputValidationError
+from aiida_quantumespresso.calculations.base import CalcJob
+from aiida_quantumespresso.calculations.helpers import QEInputValidationError
 
 LegacyUpfData = DataFactory('core.upf')
 UpfData = DataFactory('pseudo.upf')

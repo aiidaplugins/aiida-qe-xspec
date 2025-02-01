@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Workchain to compute all X-ray absorption spectra for a given structure.
 
 Uses QuantumESPRESSO pw.x and xspectra.x.

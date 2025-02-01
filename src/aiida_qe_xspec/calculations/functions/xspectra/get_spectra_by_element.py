@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Calcfunction to compile a complete spectrum for each element from multiple powder sample spectra."""
 from aiida import orm
 from aiida.engine import calcfunction

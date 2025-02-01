@@ -7,4 +7,5 @@ How-to guides
    :maxdepth: 1
    :caption: Contents:
 
-   xps
+   xps_workchain
+   xps_qeapp

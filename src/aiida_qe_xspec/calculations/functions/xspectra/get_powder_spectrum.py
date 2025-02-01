@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CalcFunction to compute the powder spectrum of a set of XANES spectra from ``XspectraCalculation``."""
 from aiida.common import ValidationError
 from aiida.engine import calcfunction

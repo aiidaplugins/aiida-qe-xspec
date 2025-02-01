@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CalcFunction to compute the spectrum from ``XpsWorkchain``."""
 from aiida import orm
 from aiida.engine import calcfunction

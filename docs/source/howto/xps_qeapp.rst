@@ -1,5 +1,5 @@
 ============================
-How to calculate XPS spectra
+XPS spectra inside AiiDAlab
 ============================
 
 Overview

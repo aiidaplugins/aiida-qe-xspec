@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CalcFunction to merge multiple ``XyData`` nodes of calculated XANES spectra into a new ``XyData`` node."""
 from aiida.engine import calcfunction
 from aiida.orm import XyData
