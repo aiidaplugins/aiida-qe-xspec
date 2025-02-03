@@ -67,9 +67,9 @@ docs = [
 
 [project.urls]
 documentation = 'https://aiida-qe-xspec.readthedocs.io/'
-homepage = 'https://github.com/aiidalab/aiida-qe-xspec'
-source = 'https://github.com/aiidalab/aiida-qe-xspec'
-tracker = 'https://github.com/aiidalab/aiida-qe-xspec/issues'
+homepage = 'https://github.com/aiidaplugins/aiida-qe-xspec'
+source = 'https://github.com/aiidaplugins/aiida-qe-xspec'
+tracker = 'https://github.com/aiidaplugins/aiida-qe-xspec/issues'
 
 [tool.flit.module]
 name = 'aiida_qe_xspec'
