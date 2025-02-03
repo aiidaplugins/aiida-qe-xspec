@@ -64,13 +64,13 @@ html_css_files = [
 ]
 
 html_theme_options = {
-    'source_repository': 'https://github.com/aiidalab/aiida-qe-xspec/',
+    'source_repository': 'https://github.com/aiidaplugins/aiida-qe-xspec/',
     'source_branch': 'main',
     'source_directory': 'docs/source',
     'footer_icons': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/aiidalab/aiida-qe-xspec',
+            'url': 'https://github.com/aiidaplugins/aiida-qe-xspec',
             'html': """
                 <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47
