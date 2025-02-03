@@ -516,7 +516,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
 
     def get_xspectra_structures(self):
         """Perform symmetry analysis of the relaxed structure and get all marked structures for XSpectra."""
-        from aiida_quantumespresso.workflows.functions.get_xspectra_structures import get_xspectra_structures
+        from aiida_qe_xspec.workflows.functions.get_xspectra_structures import get_xspectra_structures
 
         elements_list = self.inputs.elements_list
 
