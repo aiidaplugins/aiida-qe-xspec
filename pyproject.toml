@@ -31,7 +31,7 @@ readme = 'README.md'
 requires-python = '>=3.9'
 
 [project.entry-points.'aiida.calculations']
-"xspec.xspectracalculation" = "aiida_qe_xspec.calculations.xspectra:XspectraCalculation"
+"xspec.xspectra" = "aiida_qe_xspec.calculations.xspectra:XspectraCalculation"
 
 [project.entry-points.'aiida.data']
 

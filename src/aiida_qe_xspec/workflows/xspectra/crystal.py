@@ -17,8 +17,8 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recur
 PwCalculation = CalculationFactory('quantumespresso.pw')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
-XspectraBaseWorkChain = WorkflowFactory('quantumespresso.xspectra.base')
-XspectraCoreWorkChain = WorkflowFactory('quantumespresso.xspectra.core')
+XspectraBaseWorkChain = WorkflowFactory('xspec.xspectra.base')
+XspectraCoreWorkChain = WorkflowFactory('xspec.xspectra.core')
 XyData = DataFactory('core.array.xy')
 
 
@@ -685,7 +685,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
                 new_scf_params['SYSTEM']['starting_magnetization'] = {abs_atom_marker : 1}
 
             # remove any duplicates created from the "core_hole_treatments.yaml" defaults
-            new_scf_params_keys = [k for k in new_scf_params['SYSTEM'].keys()]
+            new_scf_params_keys = list(new_scf_params['SYSTEM'].keys())
             for key in new_scf_params_keys:
                 if 'starting_magnetization(' in key:
                     new_scf_params['SYSTEM'].pop(key, None)

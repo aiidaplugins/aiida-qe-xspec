@@ -12,14 +12,14 @@ from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 import yaml
 
-from aiida_quantumespresso.calculations.functions.xspectra.get_powder_spectrum import get_powder_spectrum
-from aiida_quantumespresso.calculations.functions.xspectra.merge_spectra import merge_spectra
+from aiida_qe_xspec.calculations.functions.xspectra.get_powder_spectrum import get_powder_spectrum
+from aiida_qe_xspec.calculations.functions.xspectra.merge_spectra import merge_spectra
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recursive_merge
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
-XspectraBaseWorkChain = WorkflowFactory('quantumespresso.xspectra.base')
+XspectraBaseWorkChain = WorkflowFactory('xspec.xspectra.base')
 HubbardStructureData = DataFactory('quantumespresso.hubbard_structure')
 
 
@@ -308,7 +308,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         :param pw_code: the ``Code`` instance configured for the ``quantumespresso.pw``
                         plugin.
         :param xs_code: the ``Code`` instance configured for the
-                        ``quantumespresso.xspectra`` plugin.
+                        ``xspec.xspectra`` plugin.
         :param structure: the ``StructureData`` instance to use.
         :param upf2plotcore_code: the aiida-shell ``Code`` instance configured for the
                                   upf2plotcore.sh shell script, used to generate the core
