@@ -33,7 +33,7 @@ To install the package from source, first clone the repository and then install 
 
 .. code-block:: console
 
-    $ git clone https://github.com/aiidalab/aiida-qe-xspec
+    $ git clone https://github.com/aiidaplugins/aiida-qe-xspec
     $ cd aiida-qe-xspec
     $ pip install -e .
 
