@@ -8,7 +8,7 @@ from aiida.plugins import CalculationFactory
 from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance import create_kpoints_from_distance
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
-XspectraCalculation = CalculationFactory('quantumespresso.xspectra')
+XspectraCalculation = CalculationFactory('xspec.xspectra')
 
 
 class XspectraBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
