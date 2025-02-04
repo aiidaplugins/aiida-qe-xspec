@@ -543,8 +543,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         formatted as {<variable_name> : <parameter>} for each variable in the
         ``get_symmetry_dataset()`` method.
         """
-        from aiida_quantumespresso.workflows.functions.get_marked_structures import get_marked_structures
-        from aiida_quantumespresso.workflows.functions.get_xspectra_structures import get_xspectra_structures
+        from aiida_qe_xspec.workflows.functions.get_marked_structures import get_marked_structures
+        from aiida_qe_xspec.workflows.functions.get_xspectra_structures import get_xspectra_structures
 
         input_structure = self.inputs.structure if 'relax' not in self.inputs else self.ctx.relaxed_structure
         if self.ctx.elements_list:

@@ -41,8 +41,8 @@ requires-python = '>=3.9'
 [project.entry-points.'aiida.workflows']
 'xspec.xps' = 'aiida_qe_xspec.workflows.xps:XpsWorkChain'
 "xspec.xspectra.base" = "aiida_qe_xspec.workflows.xspectra.base:XspectraBaseWorkChain"
-"xspec.xspectra.core" = "aiida_qe_xspec.workflows.xspectra.base:XspectraCoreWorkChain"
-"xspec.xspectra.crystal" = "aiida_qe_xspec.workflows.xspectra.base:XspectraCrystalWorkChain"
+"xspec.xspectra.core" = "aiida_qe_xspec.workflows.xspectra.core:XspectraCoreWorkChain"
+"xspec.xspectra.crystal" = "aiida_qe_xspec.workflows.xspectra.crystal:XspectraCrystalWorkChain"
 
 [project.entry-points."aiidalab_qe.properties"]
 "xas" = "aiida_qe_xspec.gui.xas:xas"
