@@ -3,7 +3,7 @@ from importlib import resources as importlib_resources
 import yaml
 
 from aiidalab_qe.common.panel import PluginOutline
-from aiidalab_qe.plugins import xas as xas_folder
+from aiida_qe_xspec.gui import xas as xas_folder
 
 from .model import XasConfigurationSettingsModel
 from .resources import XasResourceSettingsModel, XasResourceSettingsPanel
