@@ -10,7 +10,7 @@ import yaml
 from aiida import orm
 from aiidalab_qe.common.mixins import HasInputStructure
 from aiidalab_qe.common.panel import ConfigurationSettingsModel
-from aiidalab_qe.plugins import xas as xas_folder
+from aiida_qe_xspec.gui import xas as xas_folder
 
 
 class XasConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure):
@@ -85,16 +85,21 @@ class XasConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
     def get_model_state(self):
         pseudo_labels = {}
         core_wfc_data_labels = {}
-        for element in self.kind_names.keys():
-            pseudo_labels[element] = {
-                'gipaw': self.gipaw_pseudos[element],
-                'core_hole': self.core_hole_pseudos[element],
-            }
-            core_wfc_data_labels[element] = self.core_wfc_data_dict[element]
+        for element, is_selected in self.kind_names.items():
+            if is_selected:
+                pseudo_labels[element] = {
+                    'gipaw': self.gipaw_pseudos[element],
+                    'core_hole': self.core_hole_pseudos[element],
+                }
+                core_wfc_data_labels[element] = self.core_wfc_data_dict[element]
+            else:
+                self.core_hole_treatments.pop(element)
+
+        elements_list = [key for key in self.kind_names if self.kind_names[key]]
 
         return {
             # "structure_type": self.structure_type,
-            'elements_list': list(self.kind_names.keys()),
+            'elements_list': elements_list,
             'core_hole_treatments': self.core_hole_treatments,
             'pseudo_labels': pseudo_labels,
             'core_wfc_data_labels': core_wfc_data_labels,

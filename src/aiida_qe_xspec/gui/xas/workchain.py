@@ -5,7 +5,7 @@ import yaml
 from aiida import orm
 from aiida.plugins import WorkflowFactory
 from aiida_quantumespresso.common.types import ElectronicType, SpinType
-from aiidalab_qe.plugins import xas as xas_folder
+from aiida_qe_xspec.gui import xas as xas_folder
 from aiidalab_qe.utils import (
     enable_pencil_decomposition,
     set_component_resources,
