@@ -105,7 +105,7 @@ class XspectraParser(BaseParser):
     @staticmethod
     def parse_stdout(stdout: str, logs: AttributeDict) -> Tuple[dict, AttributeDict]:
         """Parse the ``stdout`` of XSpectra for the core level energy and energy zero of the spectrum."""
-        from .parse_raw.base import convert_qe_time_to_sec
+        from aiida_quantumespresso.parsers.parse_raw.base import convert_qe_time_to_sec
 
         parsed_data = {}
 
