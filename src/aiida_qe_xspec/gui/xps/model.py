@@ -52,9 +52,10 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
     )
     core_levels = tl.Dict(
         key_trait=tl.Unicode(),  # core level
-        value_trait=tl.Bool(),  # whether the core level is included
+        value_trait=tl.List(),
         default_value={},
     )
+    atom_indices = tl.List(trait=tl.Unicode(), default_value=[])
 
     def update(self, specific=''):
         with self.hold_trait_notifications():
@@ -67,9 +68,9 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         for key in self.correction_energies:
             element = key.split('_')[0]
             if element not in supported_core_levels:
-                supported_core_levels[element] = [key]
+                supported_core_levels[element] = [key.split('_')[1]]
             else:
-                supported_core_levels[element].append(key)
+                supported_core_levels[element].append(key.split('_')[1])
         return supported_core_levels
 
     def get_model_state(self):
@@ -78,7 +79,8 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
             'structure_type': self.structure_type,
             'pseudo_group': self.pseudo_group,
             'correction_energies': self.correction_energies,
-            'core_level_list': list(self.core_levels.keys()),
+            'core_levels': self.core_levels,
+            'atom_indices': self.atom_indices,
         }
 
     def set_model_state(self, parameters: dict):
@@ -91,10 +93,8 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
             self.traits()['structure_type'].default_value,
         )
 
-        core_level_list = parameters.get('core_level_list', [])
-        for orbital in self.core_levels:
-            if orbital in core_level_list:
-                self.core_levels[orbital] = True  # type: ignore
+        self.core_levels = parameters.get('core_levels', [])
+        self.atom_indices = parameters.get('atom_indices', [])
 
     def reset(self):
         with self.hold_trait_notifications():

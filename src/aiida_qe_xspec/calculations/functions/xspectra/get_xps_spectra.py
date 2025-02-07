@@ -3,15 +3,54 @@ from aiida import orm
 from aiida.engine import calcfunction
 import numpy as np
 
+def spectra_broadening(points, sigma=0.1, gamma=0.1):
+    """Broadening base on the binding energy."""
+    from scipy.special import voigt_profile  # pylint: disable=no-name-in-module
+
+    fwhm_voight = gamma / 2 + np.sqrt(gamma**2 / 4 + sigma**2)
+
+    result_spectra = {}
+    for element, orbitals in points.items():
+        for orbital, data in orbitals.items():
+            final_spectra_y_arrays = []
+            final_spectra_y_labels = []
+            final_spectra_y_units = []
+            total_multiplicity = sum(d['multiplicity'] for d in data.values())
+            final_spectra = orm.XyData()
+            max_core_level_shift = max([d['energy'] for d in data.values()])
+            min_core_level_shift = min([d['energy'] for d in data.values()])
+            # Energy range for the Broadening function
+            x_energy_range = np.linspace(
+                min_core_level_shift - fwhm_voight - 1.5, max_core_level_shift + fwhm_voight + 1.5, 500
+            )
+            for site, d in data.items():
+                # Weight for the spectra of every atom
+                intensity = d['multiplicity'] / total_multiplicity
+                relative_peak_position = d['energy']
+                final_spectra_y_labels.append(f'{element}_{site}')
+                final_spectra_y_units.append('sigma')
+                final_spectra_y_arrays.append(
+                    intensity* voigt_profile(x_energy_range - relative_peak_position, sigma, gamma)
+                )
+            final_spectra_y_labels.append(f'{element}_total')
+            final_spectra_y_units.append('sigma')
+            final_spectra_y_arrays.append(sum(final_spectra_y_arrays))
+            final_spectra_x_label = 'energy'
+            final_spectra_x_units = 'eV'
+            final_spectra_x_array = x_energy_range
+            final_spectra.set_x(final_spectra_x_array, final_spectra_x_label, final_spectra_x_units)
+            final_spectra.set_y(final_spectra_y_arrays, final_spectra_y_labels, final_spectra_y_units)
+            result_spectra[f'{element}_{orbital}'] = final_spectra
+    return result_spectra
 
 @calcfunction
-def get_spectra_by_element(elements_list, equivalent_sites_data, voight_gamma, voight_sigma, **kwargs):  # pylint: disable=too-many-statements
+def get_spectra_by_element(core_levels, equivalent_sites_data, voight_gamma, voight_sigma, **kwargs):  # pylint: disable=too-many-statements
     """Generate the XPS spectra for each element.
 
     Calculate the core level shift and binding energy for each element.
     Generate the final spectra using the Voigt profile.
 
-    :param elements_list: a List object defining the list of elements to consider
+    :param core_levels: a Dict object defining the elements and their core-levels to consider
             when producing spectrum.
     :param equivalent_sites_data: an Dict object containing symmetry data.
     :param voight_gamma: a Float node for the gamma parameter of the voigt profile.
@@ -21,91 +60,43 @@ def get_spectra_by_element(elements_list, equivalent_sites_data, voight_gamma, v
             and core level shift.
 
     """
-    from scipy.special import voigt_profile  # pylint: disable=no-name-in-module
+    from copy import deepcopy
 
     ground_state_node = kwargs.pop('ground_state', None)
     correction_energies = kwargs.pop('correction_energies', orm.Dict()).get_dict()
-    incoming_param_nodes = {key: value for key, value in kwargs.items() if key != 'metadata'}
-    group_state_energy = None
-    if ground_state_node is not None:
-        group_state_energy = ground_state_node.get_dict()['energy']
-    elements = elements_list.get_list()
-    sigma = voight_sigma.value
-    gamma = voight_gamma.value
+    ch_nodes = kwargs.pop('ch_nodes', {})
+    group_state_energy = ground_state_node.get_dict()['energy'] if ground_state_node is not None else None
+    core_levels = core_levels.get_dict()
     equivalency_data = equivalent_sites_data.get_dict()
 
-    data_dict = {element: {} for element in elements}
-    for key in incoming_param_nodes:
-        xspectra_out_params = incoming_param_nodes[key].get_dict()
-        multiplicity = equivalency_data[key]['multiplicity']
-        element = equivalency_data[key]['symbol']
-        total_energy = xspectra_out_params['energy']
-        data_dict[element][key] = {'element': element, 'multiplicity': multiplicity, 'total_energy': total_energy}
+    data_dict = {element: {} for element in core_levels.keys()}
+    for key, xspectra_out_params in ch_nodes.items():
+        element, _, site, orbital = key.split('_')
+        data_dict[element].setdefault(orbital, {})
+        energy = xspectra_out_params.get_dict()['energy']
+        data_dict[element][orbital][f'site_{site}'] = {'energy': energy, 'multiplicity': equivalency_data[f'site_{site}']['multiplicity']}
 
     result = {}
-    core_level_shifts = {}
-    binding_energies = {}
-    for element in elements:
-        spectra_list = []
-        for key in data_dict[element]:
-            site_multiplicity = data_dict[element][key]['multiplicity']
-            spectra_list.append((site_multiplicity, float(data_dict[element][key]['total_energy']), key))
-        spectra_list.sort(key=lambda entry: entry[1])
-        lowest_total_energy = spectra_list[0][1]
-        core_level_shift = [(entry[0], entry[1] - lowest_total_energy, entry[2]) for entry in spectra_list]
-        core_level_shifts[element] = core_level_shift
-        result[f'{element}_cls'] = orm.Dict(dict={entry[2]: entry[1] for entry in core_level_shift})
+    chemical_shifts = deepcopy(data_dict)
+    binding_energies = deepcopy(data_dict)
+    for element, orbitals in chemical_shifts.items():
+        for orbital in orbitals:
+            lowest_energy = min([data['energy'] for data in data_dict[element][orbital].values()])
+            for data in chemical_shifts[element][orbital].values():
+                data['energy'] -= lowest_energy
+            if group_state_energy is not None:
+                for data in binding_energies[element][orbital].values():
+                    data['energy'] += -group_state_energy + correction_energies[element][orbital]
 
-        if group_state_energy is not None:
-            binding_energy = [(entry[0], entry[1] - group_state_energy + correction_energies[element], entry[2])
-                              for entry in spectra_list]
-            binding_energies[element] = binding_energy
-            result[f'{element}_be'] = orm.Dict(dict={entry[2]: entry[1] for entry in binding_energy})
-
-    fwhm_voight = gamma / 2 + np.sqrt(gamma**2 / 4 + sigma**2)
-
-    def spectra_broadening(points, label='cls_spectra'):
-        """Broadening base on the binding energy."""
-        result_spectra = {}
-        for element in elements:
-            final_spectra_y_arrays = []
-            final_spectra_y_labels = []
-            final_spectra_y_units = []
-
-            total_multiplicity = sum(i[0] for i in points[element])
-
-            final_spectra = orm.XyData()
-            max_core_level_shift = points[element][-1][1]
-            min_core_level_shift = points[element][0][1]
-            # Energy range for the Broadening function
-            x_energy_range = np.linspace(
-                min_core_level_shift - fwhm_voight - 1.5, max_core_level_shift + fwhm_voight + 1.5, 500
-            )
-
-            for atoms, index in zip(points[element], range(len(points[element]))):
-                # Weight for the spectra of every atom
-                intensity = atoms[0]
-                relative_peak_position = atoms[1]
-                final_spectra_y_labels.append(f'{element}{index}_xps')
-                final_spectra_y_units.append('sigma')
-                final_spectra_y_arrays.append(
-                    intensity * voigt_profile(x_energy_range - relative_peak_position, sigma, gamma) /
-                    total_multiplicity
-                )
-
-            final_spectra_y_labels.append(f'{element}_total_xps')
-            final_spectra_y_units.append('sigma')
-            final_spectra_y_arrays.append(sum(final_spectra_y_arrays))
-
-            final_spectra_x_label = 'energy'
-            final_spectra_x_units = 'eV'
-            final_spectra_x_array = x_energy_range
-            final_spectra.set_x(final_spectra_x_array, final_spectra_x_label, final_spectra_x_units)
-            final_spectra.set_y(final_spectra_y_arrays, final_spectra_y_labels, final_spectra_y_units)
-            result_spectra[f'{element}_{label}'] = final_spectra
-        return result_spectra
-
-    result.update(spectra_broadening(core_level_shifts))
+    result['chemical_shifts'] = orm.Dict(chemical_shifts)
+    spectra = spectra_broadening(chemical_shifts,
+                                     sigma=voight_sigma.value,
+                                     gamma=voight_gamma.value)
+    result['chemical_shift_spectra'] = spectra
     if ground_state_node is not None:
-        result.update(spectra_broadening(binding_energies, label='be_spectra'))
+        spectra = spectra_broadening(binding_energies,
+                                     sigma=voight_sigma.value,
+                                     gamma=voight_gamma.value)
+        result['binding_energy_spectra'] = spectra
+        result['binding_energies'] = orm.Dict(binding_energies)
     return result

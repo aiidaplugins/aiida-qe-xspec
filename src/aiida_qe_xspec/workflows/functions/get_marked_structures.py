@@ -6,10 +6,10 @@ from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 
 
 @calcfunction
-def get_marked_structures(structure, atoms_list, marker='X'):
+def get_marked_structures(structure, atom_indices, marker='X'):
     """Read a StructureData object and return structures for XPS calculations.
 
-    :param atoms_list:  the atoms_list of atoms to be marked.
+    :param atom_indices:  the indices of atoms to be marked.
     :param marker: a Str node defining the name of the marked atom Kind. Default is 'X'.
     :returns: StructureData objects for the generated structure.
     """
@@ -23,7 +23,7 @@ def get_marked_structures(structure, atoms_list, marker='X'):
     output_params = {}
     result = {}
 
-    for index in atoms_list.get_list():
+    for index in atom_indices.get_list():
         marked_structure = StructureData()
         kinds = {kind.name: kind for kind in structure.kinds}
         marked_structure.set_cell(structure.cell)
