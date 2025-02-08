@@ -601,7 +601,7 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         labels = {}
         for site in structures_to_process:
             abs_element = equivalent_sites_data[site]['symbol']
-            labels[abs_element] = []
+            labels.setdefault(abs_element, [])
             for orbital in self.ctx.core_levels[abs_element]:
                 key = f'{abs_element}_{site}_{orbital}'
                 labels[abs_element].append(key)

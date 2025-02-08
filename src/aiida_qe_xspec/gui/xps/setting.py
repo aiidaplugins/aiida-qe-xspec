@@ -49,6 +49,28 @@ class XpsConfigurationSettingsPanel(
         )
 
         self.core_levels_widget = ipw.VBox()
+        self.atom_indices_input = ipw.Text(
+            description='Indices:',
+            placeholder='Enter indices separated by commas',
+            style={'description_width': 'initial'},
+        )
+        ipw.link(
+            (self._model, 'atom_indices'),
+            (self.atom_indices_input, 'value'),
+            [
+                lambda value: ', '.join(value),
+                lambda value: [int(i.strip()) for i in value.split(',') if i.strip()],
+            ],
+        )
+        self.atom_indices_container = ipw.VBox([
+            ipw.HTML("""
+                     <div style="margin-top: 10px;">
+                    <h4>Select atoms</h4>
+                     Leave empty to calculate for all atoms of selected element.
+                </div>
+                """),
+            self.atom_indices_input,
+        ])
 
         self.structure_type = ipw.ToggleButtons()
         ipw.dlink(
@@ -126,9 +148,10 @@ class XpsConfigurationSettingsPanel(
                 </div>
             """
             ),
-            ipw.HBox(
+            ipw.VBox(
                 children=[
                     self.core_levels_widget,
+                    self.atom_indices_container,
                 ]
             ),
         ]

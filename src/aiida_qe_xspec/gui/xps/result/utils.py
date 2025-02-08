@@ -1,17 +1,9 @@
 def export_xps_data(outputs):
     """Export the data from the XPS workchain"""
-    chemical_shifts = {}
     symmetry_analysis_data = outputs.symmetry_analysis_data.get_dict()
     equivalent_sites_data = symmetry_analysis_data['equivalent_sites_data']
-    if 'chemical_shifts' in outputs:
-        for key, data in outputs.chemical_shifts.items():
-            ele = key[:-4]
-            chemical_shifts[ele] = data.get_dict()
-    binding_energies = {}
-    if 'binding_energies' in outputs:
-        for key, data in outputs.binding_energies.items():
-            ele = key[:-3]
-            binding_energies[ele] = data.get_dict()
+    chemical_shifts = outputs.chemical_shifts.get_dict() if 'chemical_shifts' in outputs else {}
+    binding_energies = outputs.binding_energies.get_dict() if 'binding_energies' in outputs else {}
 
     return (
         chemical_shifts,
@@ -27,29 +19,29 @@ def xps_spectra_broadening(points, equivalent_sites_data, gamma=0.3, sigma=0.3, 
 
     result_spectra = {}
     fwhm_voight = gamma / 2 + np.sqrt(gamma**2 / 4 + sigma**2)
-    for element, point in points.items():
-        result_spectra[element] = {}
-        final_spectra_y_arrays = []
-        total_multiplicity = sum([equivalent_sites_data[site]['multiplicity'] for site in point])
-        max_core_level_shift = max(point.values())
-        min_core_level_shift = min(point.values())
-        # Energy range for the Broadening function
-        x_energy_range = np.linspace(
-            min_core_level_shift - fwhm_voight - 1.5,
-            max_core_level_shift + fwhm_voight + 1.5,
-            500,
-        )
-        for site in point:
-            # Weight for the spectra of every atom
-            intensity = equivalent_sites_data[site]['multiplicity'] * intensity
-            relative_core_level_position = point[site]
-            y = (
-                intensity
-                * voigt_profile(x_energy_range - relative_core_level_position, sigma, gamma)
-                / total_multiplicity
+    for element, orbitals in points.items():
+        for orbital, data in orbitals.items():
+            result_spectra[f'{element}_{orbital}'] = {}
+            final_spectra_y_arrays = []
+            total_multiplicity = sum(d['multiplicity'] for d in data.values())
+            max_core_level_shift = max([d['energy'] for d in data.values()])
+            min_core_level_shift = min([d['energy'] for d in data.values()])
+            # Energy range for the Broadening function
+            x_energy_range = np.linspace(
+                min_core_level_shift - fwhm_voight - 1.5,
+                max_core_level_shift + fwhm_voight + 1.5,
+                500,
             )
-            result_spectra[element][site] = [x_energy_range, y]
-            final_spectra_y_arrays.append(y)
-        total = sum(final_spectra_y_arrays)
-        result_spectra[element]['total'] = [x_energy_range, total]
+            for site, d in data.items():
+                # Weight for the spectra of every atom
+                relative_core_level_position = d['energy']
+                y = (
+                    intensity
+                    * voigt_profile(x_energy_range - relative_core_level_position, sigma, gamma)
+                    *d['multiplicity'] / total_multiplicity
+                )
+                result_spectra[f'{element}_{orbital}'][site] = [x_energy_range, y]
+                final_spectra_y_arrays.append(y)
+            total = sum(final_spectra_y_arrays)
+            result_spectra[f'{element}_{orbital}']['total'] = [x_energy_range, total]
     return result_spectra

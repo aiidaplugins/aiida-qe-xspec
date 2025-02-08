@@ -55,7 +55,7 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         value_trait=tl.List(),
         default_value={},
     )
-    atom_indices = tl.List(trait=tl.Unicode(), default_value=[])
+    atom_indices = tl.List(trait=tl.Int(), default_value=[])
 
     def update(self, specific=''):
         with self.hold_trait_notifications():

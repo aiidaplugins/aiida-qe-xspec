@@ -6,5 +6,6 @@ structure_examples = {
     'structures': [
         ('Phenylacetylene molecule', file_path / 'Phenylacetylene.xyz'),
         ('ETFA molecule', file_path / 'ETFA.xyz'),
+        ('Aluminum bulk', file_path / 'Al.cif'),
     ],
 }

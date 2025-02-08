@@ -41,7 +41,7 @@ class XpsResultsModel(ResultsModel):
             self.binding_energies,
             self.equivalent_sites_data,
         ) = export_xps_data(outputs)
-        options = [key.split('_')[0] for key in self.chemical_shifts.keys()]
+        options = [f'{element}_{orbital}' for element, data in self.chemical_shifts.items() for orbital in data.keys()]
         self.spectrum_options = options
         self.spectrum = options[0] if options else None
 
