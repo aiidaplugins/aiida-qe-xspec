@@ -25,13 +25,41 @@ XyData = DataFactory('core.array.xy')
 def validate_inputs(inputs, _):
     """Validate the inputs before launching the WorkChain."""
     structure = inputs['structure']
-    elements_present = [kind.name for kind in structure.kinds]
+    elements_present = {kind.symbol for kind in structure.kinds}
     abs_atom_marker = inputs['abs_atom_marker'].value
+    core_hole_pseudos = inputs['core_hole_pseudos']
     if abs_atom_marker in elements_present:
         raise ValidationError(
             f'The marker given for the absorbing atom ("{abs_atom_marker}") matches an existing Kind in the '
             f'input structure ({elements_present}).'
         )
+    if 'core_levels' in inputs:
+        # keys of core_levels should be a subset of the structure elements and core_hole_pseudos
+        core_levels = inputs['core_levels'].get_dict()
+        if not set(core_levels.keys()).issubset(elements_present):
+            elements_not_present = set(core_levels.keys()) - elements_present
+            raise ValidationError(
+                f'The following elements: {elements_not_present} are not present in the'
+                f' structure ({elements_present}) provided.'
+            )
+        if not set(core_levels.keys()).issubset(set(core_hole_pseudos.keys())):
+            elements_not_present = set(core_levels.keys()) - set(core_hole_pseudos.keys())
+            raise ValidationError(
+                f'The following elements: {elements_not_present} are required for analysis but '
+                f'their pseudopotentials are not provided.'
+            )
+    if 'atom_indices' in inputs:
+        # indices should be in the range of the number of atoms in the structure
+        if not all(0 <= index < len(structure.sites) for index in inputs['atom_indices'].get_list()):
+            raise ValidationError('All atom indices must be within the range of the number of atoms in the structure.')
+        # all the elements corresponding to the atom indices should be in the core_hole_pseudos
+        elements = {structure.get_kind(structure.sites[i].kind_name).symbol for i in inputs['atom_indices'].get_list()}
+        if not elements.issubset(set(core_hole_pseudos.keys())):
+            elements_not_present = elements - set(core_hole_pseudos.keys())
+            raise ValidationError(
+                f'The following elements: {elements_not_present} are required for analysis but'
+                f' their pseudopotentials are not provided.'
+            )
 
     if inputs['calc_binding_energy'].value:
         elements1 = set(inputs['core_levels'].keys())
@@ -41,7 +69,6 @@ def validate_inputs(inputs, _):
                 f'The ``correction_energies`` provided ({elements1}) does not match the list of'
                 f' absorbing elements ({elements2})'
             )
-
 
 class XpsWorkChain(ProtocolMixin, WorkChain):
     """Workchain to compute X-ray photoelectron spectra (XPS) for a given structure.
@@ -378,12 +405,19 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
 
         :param code: the ``Code`` instance configured for the ``quantumespresso.pw`` plugin.
         :param structure: the ``StructureData`` instance to use.
-        :param pseudos: the core-hole pseudopotential pairs (ground-state and
+        :param core_hole_pseudos: the core-hole pseudopotential (ground-state and
                         excited-state) for the elements to be calculated. These must
-                        use the mapping of {"element" : {"core_hole" : <upf>, "gipaw" : <upf>}}
+                        use the mapping of {"element" : {"1s" : <upf>, "gipaw" : <upf>}}
         :param protocol: the protocol to use. If not specified, the default will be used.
+        :core_hole_treatments: optional dictionary to set core-hole treatment for each element,
+                        e.g., {"C": "full"}.
         :param overrides: optional dictionary of inputs to override the defaults of the
                           XpsWorkChain itself.
+        :param core_levels: the elements and their core-levels to be considered for analysis.
+                            e.g., {"C": ["1s"], "Al": ["2s", "2p"]}.
+        :param atom_indices: the indices of atoms to be considered for analysis.
+        :correction_energies: optional dictionary to set the correction energy to each core level,
+                        e.g., {'C': {'1s': 339.79}}.
         :param kwargs: additional keyword arguments that will be passed to the
             ``get_builder_from_protocol`` of all the sub processes that are called by this
             workchain.
@@ -419,22 +453,11 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         else:
             builder.calc_binding_energy = orm.Bool(False)
         builder.clean_workdir = orm.Bool(inputs['clean_workdir'])
-        elements_not_present = []
-        elements_present = [kind.symbol for kind in structure.kinds]
         if core_levels is None:
             core_levels = {}
             for element, pseudos in core_hole_pseudos.items():
                 if element in structure.get_symbols_set():
                     core_levels[element] = [key for key in pseudos.keys() if key != 'gipaw']
-        for label in core_levels:
-            element = label.split('_')[0]
-            if element not in elements_present:
-                elements_not_present.append(element)
-        if len(elements_not_present) > 0:
-            raise ValueError(
-                f'The following elements: {elements_not_present} are not present in the'
-                f' structure ({elements_present}) provided.'
-            )
         builder.core_levels = orm.Dict(core_levels)
         if atom_indices:
             builder.atom_indices = orm.List(atom_indices)

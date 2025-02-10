@@ -4,7 +4,12 @@ from aiida.engine import calcfunction
 import numpy as np
 
 def spectra_broadening(points, sigma=0.1, gamma=0.1):
-    """Broadening base on the binding energy."""
+    """Broadening base on the binding energy.
+
+    :param points: a Dict object containing the binding energy and multiplicity for each site.
+    :param sigma: a Float node for the sigma parameter of the voigt profile.
+    :param gamma: a Float node for the gamma parameter of the voigt profile.
+    """
     from scipy.special import voigt_profile  # pylint: disable=no-name-in-module
 
     fwhm_voight = gamma / 2 + np.sqrt(gamma**2 / 4 + sigma**2)
@@ -51,7 +56,7 @@ def get_spectra_by_element(core_levels, equivalent_sites_data, voight_gamma, voi
     Generate the final spectra using the Voigt profile.
 
     :param core_levels: a Dict object defining the elements and their core-levels to consider
-            when producing spectrum.
+            when producing spectra, e.g., {"C": ["1s"], "Al": ["2s", "2p"]}.
     :param equivalent_sites_data: an Dict object containing symmetry data.
     :param voight_gamma: a Float node for the gamma parameter of the voigt profile.
     :param voight_sigma: a Float node for the sigma parameter of the voigt profile.
