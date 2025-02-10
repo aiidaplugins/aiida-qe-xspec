@@ -69,17 +69,21 @@ def get_spectra_by_element(core_levels, equivalent_sites_data, voight_gamma, voi
 
     ground_state_node = kwargs.pop('ground_state', None)
     correction_energies = kwargs.pop('correction_energies', orm.Dict()).get_dict()
-    ch_nodes = kwargs.pop('ch_nodes', {})
+    output_params_ch_scf = kwargs.pop('output_params_ch_scf', {})
     group_state_energy = ground_state_node.get_dict()['energy'] if ground_state_node is not None else None
     core_levels = core_levels.get_dict()
     equivalency_data = equivalent_sites_data.get_dict()
-
-    data_dict = {element: {} for element in core_levels.keys()}
-    for key, xspectra_out_params in ch_nodes.items():
-        element, _, site, orbital = key.split('_')
-        data_dict[element].setdefault(orbital, {})
-        energy = xspectra_out_params.get_dict()['energy']
-        data_dict[element][orbital][f'site_{site}'] = {'energy': energy, 'multiplicity': equivalency_data[f'site_{site}']['multiplicity']}
+    # collect the energy and multiplicity
+    data_dict = {}
+    for element, element_data in output_params_ch_scf.items():
+        data_dict[element] = {}
+        for orbital, orbital_data in element_data.items():
+            data_dict[element][orbital] = {}
+            for site, site_data in orbital_data.items():
+                data_dict[element][orbital][site] = {
+                    'energy': site_data.get_dict()['energy'],
+                    'multiplicity': equivalency_data[site]['multiplicity']
+                }
 
     result = {}
     chemical_shifts = deepcopy(data_dict)

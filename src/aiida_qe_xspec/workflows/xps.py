@@ -624,10 +624,11 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         labels = {}
         for site in structures_to_process:
             abs_element = equivalent_sites_data[site]['symbol']
-            labels.setdefault(abs_element, [])
+            labels.setdefault(abs_element, {})
             for orbital in self.ctx.core_levels[abs_element]:
+                labels[abs_element].setdefault(orbital, {})
                 key = f'{abs_element}_{site}_{orbital}'
-                labels[abs_element].append(key)
+                labels[abs_element][orbital][site] = key
                 inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='ch_scf'))
                 structure = structures_to_process[site]
                 inputs.pw.structure = structure
@@ -660,24 +661,28 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
     def inspect_all_scf(self):
         """Check that all the PwBaseWorkChain sub-processes finished sucessfully."""
         failed_work_chains = []
-        for element, labels in self.ctx.labels.items():
-            for label in labels:
-                work_chain = self.ctx[label]
-                if not work_chain.is_finished_ok:
-                    failed_work_chains.append(work_chain)
-                    self.report(f'PwBaseWorkChain for ({label}) failed with exit status {work_chain.exit_status}')
+        output_params_ch_scf = {}
+        for element, element_data in self.ctx.labels.items():
+            output_params_ch_scf[element] = {}
+            for orbital, orbital_data in element_data.items():
+                output_params_ch_scf[element][orbital] = {}
+                for site, label in orbital_data.items():
+                    work_chain = self.ctx[label]
+                    if not work_chain.is_finished_ok:
+                        failed_work_chains.append(work_chain)
+                        self.report(f'PwBaseWorkChain for ({label}) failed with exit status {work_chain.exit_status}')
+                    else:
+                        output_params_ch_scf[element][orbital][site] = work_chain.outputs.output_parameters
         if len(failed_work_chains) > 0:
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_CH_SCF
+        self.ctx.output_params_ch_scf = output_params_ch_scf
 
     def results(self):
         """Compile all output spectra, organise and post-process all computed spectra, and send to outputs."""
-        output_params_ch_scf = {}
-        for labels in self.ctx.labels.values():
-            for label in labels:
-                output_params_ch_scf[label] = self.ctx[label].outputs.output_parameters
-        self.out('output_parameters_ch_scf', output_params_ch_scf)
 
-        kwargs = {'ch_nodes': output_params_ch_scf}
+        self.out('output_parameters_ch_scf', self.ctx.output_params_ch_scf)
+
+        kwargs = {'output_params_ch_scf': self.ctx.output_params_ch_scf}
         if self.inputs.calc_binding_energy:
             kwargs['ground_state'] = self.ctx['ground_state'].outputs.output_parameters
             kwargs['correction_energies'] = self.inputs.correction_energies
