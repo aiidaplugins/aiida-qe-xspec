@@ -28,47 +28,116 @@ def validate_inputs(inputs, _):
     elements_present = {kind.symbol for kind in structure.kinds}
     abs_atom_marker = inputs['abs_atom_marker'].value
     core_hole_pseudos = inputs['core_hole_pseudos']
+
+    # 1. Check the absorbing atom marker does not clash with existing kinds
     if abs_atom_marker in elements_present:
         raise ValidationError(
             f'The marker given for the absorbing atom ("{abs_atom_marker}") matches an existing Kind in the '
             f'input structure ({elements_present}).'
         )
+
+    # 2. Validate `core_levels`, if provided
     if 'core_levels' in inputs:
-        # keys of core_levels should be a subset of the structure elements and core_hole_pseudos
         core_levels = inputs['core_levels'].get_dict()
+
+        # (a) Must be a dictionary {element: list_of_orbitals}
+        for element, orbitals in core_levels.items():
+            if not isinstance(orbitals, list):
+                raise ValidationError(
+                    f'`core_levels` for element "{element}" must be a list of strings, e.g. ["1s", "2s"], '
+                    f'but got: {orbitals}'
+                )
+
+        # (b) The keys of `core_levels` should be a subset of the structure's elements:
         if not set(core_levels.keys()).issubset(elements_present):
             elements_not_present = set(core_levels.keys()) - elements_present
             raise ValidationError(
-                f'The following elements: {elements_not_present} are not present in the'
-                f' structure ({elements_present}) provided.'
+                f'The following elements: {elements_not_present} in `core_levels` '
+                f'are not present in the structure ({elements_present}).'
             )
+
+        # (c) The keys of `core_levels` should be a subset of `core_hole_pseudos`:
         if not set(core_levels.keys()).issubset(set(core_hole_pseudos.keys())):
-            elements_not_present = set(core_levels.keys()) - set(core_hole_pseudos.keys())
+            missing = set(core_levels.keys()) - set(core_hole_pseudos.keys())
             raise ValidationError(
-                f'The following elements: {elements_not_present} are required for analysis but '
-                f'their pseudopotentials are not provided.'
+                f'Elements {missing} are requested in `core_levels` but no corresponding '
+                f'pseudopotentials are found in `core_hole_pseudos`.'
             )
+
+        # (d) Check the orbitals themselves for consistency (typos, recognized labels, etc.)
+        #     Define a minimal set of valid orbitals here; extend as needed.
+        VALID_ORBITALS = {'1s', '2s', '2p', '3s', '3p', '3d', '4s', '4p', '4d', '4f', '5s', '5p', '5d'}
+        for element, orbitals in core_levels.items():
+            for orb in orbitals:
+                if orb not in VALID_ORBITALS:
+                    raise ValidationError(
+                        f'Unrecognized orbital "{orb}" for element "{element}". '
+                        f'Valid orbitals are: {VALID_ORBITALS}'
+                    )
+                # Check that this orbital also exists in the excited-state pseudo dictionary
+                # (i.e., `core_hole_pseudos[element]` must have a key with the same label).
+                if orb not in core_hole_pseudos[element].keys():
+                    raise ValidationError(
+                        f'No pseudopotential entry found for orbital "{orb}" under element "{element}" '
+                        f'in `core_hole_pseudos`. Found: {list(core_hole_pseudos[element].keys())}'
+                    )
+
+    # 3. Validate atom_indices, if provided
     if 'atom_indices' in inputs:
-        # indices should be in the range of the number of atoms in the structure
-        if not all(0 <= index < len(structure.sites) for index in inputs['atom_indices'].get_list()):
-            raise ValidationError('All atom indices must be within the range of the number of atoms in the structure.')
-        # all the elements corresponding to the atom indices should be in the core_hole_pseudos
-        elements = {structure.get_kind(structure.sites[i].kind_name).symbol for i in inputs['atom_indices'].get_list()}
+        atom_indices = inputs['atom_indices'].get_list()
+        # (a) Indices must be in range
+        if not all(0 <= index < len(structure.sites) for index in atom_indices):
+            raise ValidationError('All atom indices in `atom_indices` must be valid indices within the structure.')
+
+        # (b) The elements for those atoms must be in `core_hole_pseudos`
+        elements = {structure.get_kind(structure.sites[i].kind_name).symbol for i in atom_indices}
         if not elements.issubset(set(core_hole_pseudos.keys())):
             elements_not_present = elements - set(core_hole_pseudos.keys())
             raise ValidationError(
-                f'The following elements: {elements_not_present} are required for analysis but'
-                f' their pseudopotentials are not provided.'
+                f'The following elements: {elements_not_present} are required for analysis but '
+                f'no pseudopotentials are provided for them in `core_hole_pseudos`.'
             )
 
+    # 4. Validate correction_energies if calc_binding_energy=True
     if inputs['calc_binding_energy'].value:
-        elements1 = set(inputs['core_levels'].keys())
-        elements2 = set(inputs['correction_energies'].get_dict().keys())
-        if elements1 != elements2:
+        if 'core_levels' not in inputs:
             raise ValidationError(
-                f'The ``correction_energies`` provided ({elements1}) does not match the list of'
-                f' absorbing elements ({elements2})'
+                '`calc_binding_energy=True` was requested, but `core_levels` is not provided.'
             )
+        if 'correction_energies' not in inputs:
+            raise ValidationError(
+                '`calc_binding_energy=True` was requested, but `correction_energies` is not provided.'
+            )
+
+        core_levels = inputs['core_levels'].get_dict()
+        elements_in_core_levels = set(core_levels.keys())
+        correction_dict = inputs['correction_energies'].get_dict()
+        elements_in_corrections = set(correction_dict.keys())
+
+        # (a) Must have same elements
+        if elements_in_core_levels != elements_in_corrections:
+            raise ValidationError(
+                f'The elements in `correction_energies` ({elements_in_corrections}) do not match '
+                f'the elements in `core_levels` ({elements_in_core_levels}).'
+            )
+
+        # (b) Must have same orbitals per element
+        for element, orbitals in core_levels.items():
+            # orbitals is guaranteed to be a list from earlier checks
+            corrections_for_elem = correction_dict[element]
+            if not isinstance(corrections_for_elem, dict):
+                raise ValidationError(
+                    f'`correction_energies[{element}]` must be a dictionary of orbital_name: float_value. '
+                    f'Got {type(corrections_for_elem)} instead.'
+                )
+            orbitals_in_corrections = set(corrections_for_elem.keys())
+            orbitals_in_core_levels = set(orbitals)
+            if orbitals_in_core_levels != orbitals_in_corrections:
+                raise ValidationError(
+                    f'For element "{element}", the orbitals in `correction_energies` ({orbitals_in_corrections}) '
+                    f'do not match the orbitals in `core_levels` ({orbitals_in_core_levels}).'
+                )
+
 
 class XpsWorkChain(ProtocolMixin, WorkChain):
     """Workchain to compute X-ray photoelectron spectra (XPS) for a given structure.
