@@ -185,8 +185,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             valid_type=(orm.UpfData, UpfData),
             dynamic=True,
             help=(
-                'Dynamic namespace for pairs of excited-state pseudopotentials for each absorbing'
-                ' element. Must use the mapping "{element}" : {Upf}".'
+                'Dynamic namespace for ground-state and excited-state pseudopotentials for each absorbing'
+                ' element. Must use the mapping: {"element" : {"gipaw" : <upf>, "1s" : <upf>\}\}'
             )
         )
         spec.input(
