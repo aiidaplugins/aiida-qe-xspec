@@ -1,12 +1,12 @@
 from aiida.orm import Bool, Dict, Float, Group, QueryBuilder
 from aiida.plugins import WorkflowFactory
 from aiida_quantumespresso.common.types import ElectronicType, SpinType
+from aiida_qe_xspec.workflows.xps import XpsWorkChain
+from aiida_qe_xspec.utils import load_core_hole_pseudos
 from aiidalab_qe.utils import (
     enable_pencil_decomposition,
     set_component_resources,
 )
-
-XpsWorkChain = WorkflowFactory('xspec.xps')
 
 # supercell min parameter for different protocols
 supercell_min_parameter_map = {
@@ -27,23 +27,12 @@ def get_builder(codes, structure, parameters, **kwargs):
 
     protocol = parameters['workchain']['protocol']
     xps_parameters = parameters.get('xps', {})
-    all_correction_energies = xps_parameters.pop('correction_energies', {})
-    core_level_list = xps_parameters.pop('core_level_list', None)
+    core_levels = xps_parameters.pop('core_levels')
+    atom_indices = xps_parameters.pop('atom_indices', None)
     # load pseudo for excited-state and group-state.
     pseudo_group = xps_parameters.pop('pseudo_group')
-    pseudo_group = QueryBuilder().append(Group, filters={'label': pseudo_group}).one()[0]
-    # set pseudo for element
-    pseudos = {}
-    elements_list = []
-    correction_energies = {}
-    for label in core_level_list:
-        element = label.split('_')[0]
-        pseudos[element] = {
-            'core_hole': next(pseudo for pseudo in pseudo_group.nodes if pseudo.label == label),
-            'gipaw': next(pseudo for pseudo in pseudo_group.nodes if pseudo.label == f'{element}_gs'),
-        }
-        correction_energies[element] = all_correction_energies[label]['core'] - all_correction_energies[label]['exp']
-        elements_list.append(element)
+    core_hole_pseudos, correction_energies = load_core_hole_pseudos(core_levels, pseudo_group)
+
     #
     is_molecule_input = True if xps_parameters.get('structure_type') == 'molecule' else False
     # set core hole treatment based on electronic type
@@ -54,7 +43,7 @@ def get_builder(codes, structure, parameters, **kwargs):
     # if molecule input, set core hole treatment to full
     if is_molecule_input:
         core_hole_treatment = 'full'
-    core_hole_treatments = {element: core_hole_treatment for element in elements_list}
+    core_hole_treatments = {element: core_hole_treatment for element in core_levels}
     structure_preparation_settings = {
         'supercell_min_parameter': Float(supercell_min_parameter_map[protocol]),
         'is_molecule_input': Bool(is_molecule_input),
@@ -78,8 +67,9 @@ def get_builder(codes, structure, parameters, **kwargs):
         code=pw_code,
         structure=structure,
         protocol=protocol,
-        pseudos=pseudos,
-        elements_list=elements_list,
+        core_hole_pseudos=core_hole_pseudos,
+        core_levels=core_levels,
+        atom_indices=atom_indices,
         calc_binding_energy=Bool(True),
         correction_energies=Dict(correction_energies),
         core_hole_treatments=core_hole_treatments,

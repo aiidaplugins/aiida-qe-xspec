@@ -172,6 +172,9 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
             self.plot,
             upload_container,
         ]
+        self.rendered = True
+        self._post_render()
+        self._update_plot(None)
 
     def _post_render(self):
         self._model.update_spectrum_options()

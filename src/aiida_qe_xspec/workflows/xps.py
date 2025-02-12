@@ -25,21 +25,117 @@ XyData = DataFactory('core.array.xy')
 def validate_inputs(inputs, _):
     """Validate the inputs before launching the WorkChain."""
     structure = inputs['structure']
-    elements_present = [kind.name for kind in structure.kinds]
+    elements_present = {kind.symbol for kind in structure.kinds}
     abs_atom_marker = inputs['abs_atom_marker'].value
+    core_hole_pseudos = inputs['core_hole_pseudos']
+
+    # 1. Check the absorbing atom marker does not clash with existing kinds
     if abs_atom_marker in elements_present:
         raise ValidationError(
             f'The marker given for the absorbing atom ("{abs_atom_marker}") matches an existing Kind in the '
             f'input structure ({elements_present}).'
         )
-    if 'elements_list' in inputs:
-        absorbing_elements_list = sorted(inputs['elements_list'])
-        if inputs['calc_binding_energy'].value:
-            ce_list = sorted(inputs['correction_energies'].get_dict().keys())
-            if ce_list != absorbing_elements_list:
+
+    # 2. Validate `core_levels`, if provided
+    if 'core_levels' in inputs:
+        core_levels = inputs['core_levels'].get_dict()
+
+        # (a) Must be a dictionary {element: list_of_orbitals}
+        for element, orbitals in core_levels.items():
+            if not isinstance(orbitals, list):
                 raise ValidationError(
-                    f'The ``correction_energies`` provided ({ce_list}) does not match the list of'
-                    f' absorbing elements ({absorbing_elements_list})'
+                    f'`core_levels` for element "{element}" must be a list of strings, e.g. ["1s", "2s"], '
+                    f'but got: {orbitals}'
+                )
+
+        # (b) The keys of `core_levels` should be a subset of the structure's elements:
+        if not set(core_levels.keys()).issubset(elements_present):
+            elements_not_present = set(core_levels.keys()) - elements_present
+            raise ValidationError(
+                f'The following elements: {elements_not_present} in `core_levels` '
+                f'are not present in the structure ({elements_present}).'
+            )
+
+        # (c) The keys of `core_levels` should be a subset of `core_hole_pseudos`:
+        if not set(core_levels.keys()).issubset(set(core_hole_pseudos.keys())):
+            missing = set(core_levels.keys()) - set(core_hole_pseudos.keys())
+            raise ValidationError(
+                f'Elements {missing} are requested in `core_levels` but no corresponding '
+                f'pseudopotentials are found in `core_hole_pseudos`.'
+            )
+
+        # (d) Check the orbitals themselves for consistency (typos, recognized labels, etc.)
+        #     Define a minimal set of valid orbitals here; extend as needed.
+        VALID_ORBITALS = {'1s', '2s', '2p', '3s', '3p', '3d', '4s', '4p', '4d', '4f', '5s', '5p', '5d'}
+        for element, orbitals in core_levels.items():
+            for orb in orbitals:
+                if orb not in VALID_ORBITALS:
+                    raise ValidationError(
+                        f'Unrecognized orbital "{orb}" for element "{element}". '
+                        f'Valid orbitals are: {VALID_ORBITALS}'
+                    )
+                # Check that this orbital also exists in the excited-state pseudo dictionary
+                # (i.e., `core_hole_pseudos[element]` must have a key with the same label).
+                if orb not in core_hole_pseudos[element].keys():
+                    raise ValidationError(
+                        f'No pseudopotential entry found for orbital "{orb}" under element "{element}" '
+                        f'in `core_hole_pseudos`. Found: {list(core_hole_pseudos[element].keys())}'
+                    )
+
+    # 3. Validate atom_indices, if provided
+    if 'atom_indices' in inputs:
+        atom_indices = inputs['atom_indices'].get_list()
+        # (a) Indices must be in range
+        if not all(0 <= index < len(structure.sites) for index in atom_indices):
+            raise ValidationError('All atom indices in `atom_indices` must be valid indices within the structure.')
+
+        # (b) The elements for those atoms must be in `core_hole_pseudos`
+        elements = {structure.get_kind(structure.sites[i].kind_name).symbol for i in atom_indices}
+        if not elements.issubset(set(core_hole_pseudos.keys())):
+            elements_not_present = elements - set(core_hole_pseudos.keys())
+            raise ValidationError(
+                f'The following elements: {elements_not_present} are required for analysis but '
+                f'no pseudopotentials are provided for them in `core_hole_pseudos`.'
+            )
+
+    # 4. Validate correction_energies if calc_binding_energy=True
+    if inputs['calc_binding_energy'].value:
+        if 'core_levels' not in inputs:
+            raise ValidationError(
+                '`calc_binding_energy=True` was requested, but `core_levels` is not provided.'
+            )
+        if 'correction_energies' not in inputs:
+            raise ValidationError(
+                '`calc_binding_energy=True` was requested, but `correction_energies` is not provided.'
+            )
+
+        core_levels = inputs['core_levels'].get_dict()
+        elements_in_core_levels = set(core_levels.keys())
+        correction_dict = inputs['correction_energies'].get_dict()
+        elements_in_corrections = set(correction_dict.keys())
+
+        # (a) Must have same elements
+        if elements_in_core_levels != elements_in_corrections:
+            raise ValidationError(
+                f'The elements in `correction_energies` ({elements_in_corrections}) do not match '
+                f'the elements in `core_levels` ({elements_in_core_levels}).'
+            )
+
+        # (b) Must have same orbitals per element
+        for element, orbitals in core_levels.items():
+            # orbitals is guaranteed to be a list from earlier checks
+            corrections_for_elem = correction_dict[element]
+            if not isinstance(corrections_for_elem, dict):
+                raise ValidationError(
+                    f'`correction_energies[{element}]` must be a dictionary of orbital_name: float_value. '
+                    f'Got {type(corrections_for_elem)} instead.'
+                )
+            orbitals_in_corrections = set(corrections_for_elem.keys())
+            orbitals_in_core_levels = set(orbitals)
+            if orbitals_in_core_levels != orbitals_in_corrections:
+                raise ValidationError(
+                    f'For element "{element}", the orbitals in `correction_energies` ({orbitals_in_corrections}) '
+                    f'do not match the orbitals in `core_levels` ({orbitals_in_core_levels}).'
                 )
 
 
@@ -89,17 +185,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             valid_type=(orm.UpfData, UpfData),
             dynamic=True,
             help=(
-                'Dynamic namespace for pairs of excited-state pseudopotentials for each absorbing'
-                ' element. Must use the mapping "{element}" : {Upf}".'
-            )
-        )
-        spec.input_namespace(
-            'gipaw_pseudos',
-            valid_type=(orm.UpfData, UpfData),
-            dynamic=True,
-            help=(
-                'Dynamic namespace for pairs of ground-state pseudopotentials for each absorbing'
-                ' element. Must use the mapping "{element}" : {Upf}".'
+                'Dynamic namespace for ground-state and excited-state pseudopotentials for each absorbing'
+                ' element. Must use the mapping: {"element" : {"gipaw" : <upf>, "1s" : <upf>\}\}'
             )
         )
         spec.input(
@@ -160,15 +247,15 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             )
         )
         spec.input(
-            'elements_list',
-            valid_type=orm.List,
+            'core_levels',
+            valid_type=orm.Dict,
             required=False,
             help=(
-            'The list of elements to be considered for analysis, each must be valid elements of the periodic table.'
+            'The elements and their core-levels to be considered for analysis. The element symbol must be valid elements of the periodic table.'
             )
         )
         spec.input(
-            'atoms_list',
+            'atom_indices',
             valid_type=orm.List,
             required=False,
             help=(
@@ -260,26 +347,24 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             dynamic=True,
             help='The output parameters of each ``PwBaseWorkChain`` performed``.'
         )
-        spec.output_namespace(
+        spec.output(
             'chemical_shifts',
             valid_type=orm.Dict,
-            dynamic=True,
             help='All the chemical shift values for each element calculated by the WorkChain.'
         )
-        spec.output_namespace(
+        spec.output(
             'binding_energies',
             valid_type=orm.Dict,
-            dynamic=True,
             help='All the binding energy values for each element calculated by the WorkChain.'
         )
         spec.output_namespace(
-            'final_spectra_cls',
+            'chemical_shift_spectra',
             valid_type=orm.XyData,
             dynamic=True,
             help='The fully-resolved spectra for each element based on chemical shift.'
         )
         spec.output_namespace(
-            'final_spectra_be',
+            'binding_energy_spectra',
             valid_type=orm.XyData,
             dynamic=True,
             help='The fully-resolved spectra for each element based on binding energy.'
@@ -374,12 +459,12 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         cls,
         code,
         structure,
-        pseudos,
+        core_hole_pseudos,
         core_hole_treatments=None,
         protocol=None,
         overrides=None,
-        elements_list=None,
-        atoms_list=None,
+        core_levels=None,
+        atom_indices=None,
         options=None,
         structure_preparation_settings=None,
         correction_energies=None,
@@ -389,12 +474,19 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
 
         :param code: the ``Code`` instance configured for the ``quantumespresso.pw`` plugin.
         :param structure: the ``StructureData`` instance to use.
-        :param pseudos: the core-hole pseudopotential pairs (ground-state and
+        :param core_hole_pseudos: the core-hole pseudopotential (ground-state and
                         excited-state) for the elements to be calculated. These must
-                        use the mapping of {"element" : {"core_hole" : <upf>, "gipaw" : <upf>}}
+                        use the mapping of {"element" : {"1s" : <upf>, "gipaw" : <upf>}}
         :param protocol: the protocol to use. If not specified, the default will be used.
+        :core_hole_treatments: optional dictionary to set core-hole treatment for each element,
+                        e.g., {"C": "full"}.
         :param overrides: optional dictionary of inputs to override the defaults of the
                           XpsWorkChain itself.
+        :param core_levels: the elements and their core-levels to be considered for analysis.
+                            e.g., {"C": ["1s"], "Al": ["2s", "2p"]}.
+        :param atom_indices: the indices of atoms to be considered for analysis.
+        :correction_energies: optional dictionary to set the correction energy to each core level,
+                        e.g., {'C': {'1s': 339.79}}.
         :param kwargs: additional keyword arguments that will be passed to the
             ``get_builder_from_protocol`` of all the sub processes that are called by this
             workchain.
@@ -430,39 +522,15 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         else:
             builder.calc_binding_energy = orm.Bool(False)
         builder.clean_workdir = orm.Bool(inputs['clean_workdir'])
-        core_hole_pseudos = {}
-        gipaw_pseudos = {}
-        if elements_list:
-            elements_not_present = []
-            elements_present = [kind.symbol for kind in structure.kinds]
-            for element in elements_list:
-                if element not in elements_present:
-                    elements_not_present.append(element)
-
-            if len(elements_not_present) > 0:
-                raise ValueError(
-                    f'The following elements: {elements_not_present} are not present in the'
-                    f' structure ({elements_present}) provided.'
-                )
-            else:
-                builder.elements_list = orm.List(elements_list)
-                for element in elements_list:
-                    core_hole_pseudos[element] = pseudos[element]['core_hole']
-                    gipaw_pseudos[element] = pseudos[element]['gipaw']
-        elif atoms_list:
-            builder.atoms_list = orm.List(atoms_list)
-            for index in atoms_list:
-                element = structure.sites[index].kind_name
-                core_hole_pseudos[element] = pseudos[element]['core_hole']
-                gipaw_pseudos[element] = pseudos[element]['gipaw']
-        # if no elements list is given, we instead initalise the pseudos dict with all
-        # elements in the structure
-        else:
-            for element in pseudos:
-                core_hole_pseudos[element] = pseudos[element]['core_hole']
-                gipaw_pseudos[element] = pseudos[element]['gipaw']
+        if core_levels is None:
+            core_levels = {}
+            for element, pseudos in core_hole_pseudos.items():
+                if element in structure.get_symbols_set():
+                    core_levels[element] = [key for key in pseudos.keys() if key != 'gipaw']
+        builder.core_levels = orm.Dict(core_levels)
+        if atom_indices:
+            builder.atom_indices = orm.List(atom_indices)
         builder.core_hole_pseudos = core_hole_pseudos
-        builder.gipaw_pseudos = gipaw_pseudos
         if core_hole_treatments:
             builder.core_hole_treatments = orm.Dict(dict=core_hole_treatments)
         # for get_xspectra_structures
@@ -481,17 +549,22 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
 
     def setup(self):
         """Init required context variables."""
-        elements_list = self.inputs.get('elements_list', None)
-        atoms_list = self.inputs.get('atoms_list', None)
-        if elements_list:
-            self.ctx.elements_list = elements_list.get_list()
-            self.ctx.atoms_list = None
-        elif atoms_list:
-            self.ctx.atoms_list = atoms_list.get_list()
-            self.ctx.elements_list = None
+        self.ctx.current_structure = self.inputs.structure
+        self.ctx.atom_indices = self.inputs.atom_indices.get_list() if 'atom_indices' in self.inputs else None
+        # pseudos for all elements to be calculated should be replaced by the ground-state pseudos
+        self.ctx.pseudos = {key: value for key, value in self.inputs.ch_scf.pw.pseudos.items()}
+
+        if 'core_levels' in self.inputs.core_levels.get_dict():
+            self.ctx.core_levels = self.inputs.core_levels.get_dict()
         else:
-            structure = self.inputs.structure
-            self.ctx.elements_list = [Kind.symbol for Kind in structure.kinds]
+            core_levels = {}
+            for element, pseudos in self.inputs.core_hole_pseudos.items():
+                if element in self.inputs.structure.get_symbols_set():
+                    core_levels[element] = [key for key in pseudos.keys() if key != 'gipaw']
+            self.ctx.core_levels = core_levels
+        for kind in self.inputs.structure.kinds:
+            if kind.symbol in self.ctx.core_levels:
+                self.ctx.pseudos[kind.name] = self.inputs.core_hole_pseudos[kind.symbol]['gipaw']
 
     def should_run_relax(self):
         """If the 'relax' input namespace was specified, we relax the input structure."""
@@ -517,10 +590,9 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             self.report(f'PwRelaxWorkChain failed with exit status {workchain.exit_status}')
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_RELAX
 
-        relaxed_structure = workchain.outputs.output_structure
         relax_params = workchain.outputs.output_parameters
-        self.ctx.relaxed_structure = relaxed_structure
-        self.out('optimized_structure', relaxed_structure)
+        self.ctx.current_structure = workchain.outputs.output_structure
+        self.out('optimized_structure', workchain.outputs.output_structure)
         self.out('output_parameters_relax', relax_params)
 
     def prepare_structures(self):
@@ -546,11 +618,19 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         from aiida_qe_xspec.workflows.functions.get_marked_structures import get_marked_structures
         from aiida_qe_xspec.workflows.functions.get_xspectra_structures import get_xspectra_structures
 
-        input_structure = self.inputs.structure if 'relax' not in self.inputs else self.ctx.relaxed_structure
-        if self.ctx.elements_list:
-            elements_list = orm.List(self.ctx.elements_list)
+        input_structure = self.ctx.current_structure
+        if self.ctx.atom_indices:
             inputs = {
-                'absorbing_elements_list': elements_list,
+                'atom_indices': self.ctx.atom_indices,
+                'marker': self.inputs.abs_atom_marker,
+                'metadata': {'call_link_label': 'get_marked_structures'},
+            }
+            result = get_marked_structures(input_structure, **inputs)
+            self.ctx.supercell = input_structure
+            self.ctx.equivalent_sites_data = result.pop('output_parameters').get_dict()
+        else:
+            inputs = {
+                'absorbing_elements_list': orm.List(list(self.ctx.core_levels.keys())),
                 'absorbing_atom_marker': self.inputs.abs_atom_marker,
                 'metadata': {'call_link_label': 'get_xspectra_structures'},
             }  # populate this further once the schema for WorkChain options is figured out
@@ -579,23 +659,9 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             self.ctx.equivalent_sites_data = out_params['equivalent_sites_data']
             self.out('supercell_structure', supercell)
             self.out('symmetry_analysis_data', out_params)
-        elif self.ctx.atoms_list:
-            atoms_list = orm.List(self.ctx.atoms_list)
-            inputs = {
-                'atoms_list': atoms_list,
-                'marker': self.inputs.abs_atom_marker,
-                'metadata': {'call_link_label': 'get_marked_structures'},
-            }
-            result = get_marked_structures(input_structure, **inputs)
-            self.ctx.supercell = input_structure
-            self.ctx.equivalent_sites_data = result.pop('output_parameters').get_dict()
         structures_to_process = {f'{Key.split("_")[0]}_{Key.split("_")[1]}': Value for Key, Value in result.items()}
         self.report(f'structures_to_process: {structures_to_process}')
         self.ctx.structures_to_process = structures_to_process
-
-    def should_run_gs_scf(self):
-        """If the 'calc_binding_energy' input namespace is True, we run a scf calculation for the supercell."""
-        return self.inputs.calc_binding_energy
 
     def run_gs_scf(self):
         """Call ``PwBaseWorkChain`` to compute total energy for the supercell."""
@@ -604,26 +670,12 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         inputs.metadata.call_link_label = 'supercell_xps'
 
         inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
-        # pseudos for all elements to be calculated should be replaced
-        for site in self.ctx.equivalent_sites_data:
-            abs_element = self.ctx.equivalent_sites_data[site]['symbol']
-            inputs.pw.pseudos[abs_element] = self.inputs.gipaw_pseudos[abs_element]
+        inputs.pw.pseudos = {key: value for key, value in self.ctx.pseudos.items()}
         running = self.submit(PwBaseWorkChain, **inputs)
 
         self.report(f'launched PwBaseWorkChain for supercell<{running.pk}>')
 
         return running
-
-    def inspect_scf(self):
-        """Verify that the PwBaseWorkChain finished successfully."""
-        workchain = self.ctx.scf_workchain
-
-        if not workchain.is_finished_ok:
-            self.report(f'PwBaseWorkChain failed with exit status {workchain.exit_status}')
-            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
-
-        scf_params = workchain.outputs.output_parameters
-        self.out('output_parameters_scf', scf_params)
 
     def run_all_scf(self):
         """Call all PwBaseWorkChain's required to compute total energies for each absorbing atom site."""
@@ -637,103 +689,80 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         equivalent_sites_data = self.ctx.equivalent_sites_data
         abs_atom_marker = self.inputs.abs_atom_marker.value
 
+        ch_treatments = self.inputs.core_hole_treatments.get_dict() if 'core_hole_treatments' in self.inputs else {}
+        labels = {}
         for site in structures_to_process:
-            inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='ch_scf'))
-            structure = structures_to_process[site]
-            inputs.pw.structure = structure
             abs_element = equivalent_sites_data[site]['symbol']
-
-            if 'core_hole_treatments' in self.inputs:
-                ch_treatments = self.inputs.core_hole_treatments.get_dict()
+            labels.setdefault(abs_element, {})
+            for orbital in self.ctx.core_levels[abs_element]:
+                labels[abs_element].setdefault(orbital, {})
+                key = f'{abs_element}_{site}_{orbital}'
+                labels[abs_element][orbital][site] = key
+                inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='ch_scf'))
+                structure = structures_to_process[site]
+                inputs.pw.structure = structure
                 ch_treatment = ch_treatments.get(abs_element, 'xch_smear')
-            else:
-                ch_treatment = 'xch_smear'
+                inputs.metadata.call_link_label = f'{key}'
+                # Get the given settings for the SCF inputs and then overwrite them with the
+                # chosen core-hole approximation, then apply the correct pseudopotential pair
+                scf_params = inputs.pw.parameters.get_dict()
+                ch_treatment_inputs = self.get_treatment_inputs(treatment=ch_treatment)
+                new_scf_params = recursive_merge(left=scf_params, right=ch_treatment_inputs)
+                if ch_treatment == 'xch_smear':
+                    structure_kinds = [kind.name for kind in structure.kinds]
+                    structure_kinds.sort()
+                    abs_species = structure_kinds.index(abs_atom_marker)
+                    new_scf_params['SYSTEM'][f'starting_magnetization({abs_species + 1})'] = 1
+                # remove pseudo if the only element is replaced by the marker
+                inputs.pw.pseudos = {key: value for key, value in self.ctx.pseudos.items() if key in structure.get_kind_names()}
+                inputs.pw.pseudos[abs_atom_marker] = self.inputs.core_hole_pseudos[abs_element][orbital]
+                inputs.pw.parameters = orm.Dict(dict=new_scf_params)
 
-            inputs.metadata.call_link_label = f'{site}_xps'
+                inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
 
-            # Get the given settings for the SCF inputs and then overwrite them with the
-            # chosen core-hole approximation, then apply the correct pseudopotential pair
-            scf_params = inputs.pw.parameters.get_dict()
-            ch_treatment_inputs = self.get_treatment_inputs(treatment=ch_treatment)
-
-            new_scf_params = recursive_merge(left=scf_params, right=ch_treatment_inputs)
-            if ch_treatment == 'xch_smear':
-                structure_kinds = [kind.name for kind in structure.kinds]
-                structure_kinds.sort()
-                abs_species = structure_kinds.index(abs_atom_marker)
-                new_scf_params['SYSTEM'][f'starting_magnetization({abs_species + 1})'] = 1
-
-            core_hole_pseudo = self.inputs.core_hole_pseudos[abs_element]
-            inputs.pw.pseudos[abs_atom_marker] = core_hole_pseudo
-            # pseudos for all elements to be calculated should be replaced
-            for key in self.ctx.equivalent_sites_data:
-                abs_element = self.ctx.equivalent_sites_data[key]['symbol']
-                inputs.pw.pseudos[abs_element] = self.inputs.gipaw_pseudos[abs_element]
-            # remove pseudo if the only element is replaced by the marker
-            inputs.pw.pseudos = {kind.name: inputs.pw.pseudos[kind.name] for kind in structure.kinds}
-
-            inputs.pw.parameters = orm.Dict(dict=new_scf_params)
-
-            inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
-
-            future = self.submit(PwBaseWorkChain, **inputs)
-            futures[site] = future
-            self.report(f'launched PwBaseWorkChain for {site}<{future.pk}>')
+                future = self.submit(PwBaseWorkChain, **inputs)
+                futures[key] = future
+                self.report(f'launched PwBaseWorkChain for {key}<{future.pk}>')
+        self.ctx.labels = labels
 
         return ToContext(**futures)
 
     def inspect_all_scf(self):
         """Check that all the PwBaseWorkChain sub-processes finished sucessfully."""
-        labels = self.ctx.structures_to_process.keys()
-        work_chains = [self.ctx[label] for label in labels]
         failed_work_chains = []
-        for work_chain, label in zip(work_chains, labels):
-            if not work_chain.is_finished_ok:
-                failed_work_chains.append(work_chain)
-                self.report(f'PwBaseWorkChain for ({label}) failed with exit status {work_chain.exit_status}')
+        output_params_ch_scf = {}
+        for element, element_data in self.ctx.labels.items():
+            output_params_ch_scf[element] = {}
+            for orbital, orbital_data in element_data.items():
+                output_params_ch_scf[element][orbital] = {}
+                for site, label in orbital_data.items():
+                    work_chain = self.ctx[label]
+                    if not work_chain.is_finished_ok:
+                        failed_work_chains.append(work_chain)
+                        self.report(f'PwBaseWorkChain for ({label}) failed with exit status {work_chain.exit_status}')
+                    else:
+                        output_params_ch_scf[element][orbital][site] = work_chain.outputs.output_parameters
         if len(failed_work_chains) > 0:
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_CH_SCF
+        self.ctx.output_params_ch_scf = output_params_ch_scf
 
     def results(self):
         """Compile all output spectra, organise and post-process all computed spectra, and send to outputs."""
-        site_labels = list(self.ctx.structures_to_process.keys())
-        output_params_ch_scf = {label: self.ctx[label].outputs.output_parameters for label in site_labels}
-        self.out('output_parameters_ch_scf', output_params_ch_scf)
 
-        kwargs = output_params_ch_scf.copy()
+        self.out('output_parameters_ch_scf', self.ctx.output_params_ch_scf)
+
+        kwargs = {'output_params_ch_scf': self.ctx.output_params_ch_scf}
         if self.inputs.calc_binding_energy:
             kwargs['ground_state'] = self.ctx['ground_state'].outputs.output_parameters
             kwargs['correction_energies'] = self.inputs.correction_energies
         kwargs['metadata'] = {'call_link_label': 'compile_final_spectra'}
 
-        if self.ctx.elements_list:
-            elements_list = orm.List(list=self.ctx.elements_list)
-        else:
-            symbols = {value['symbol'] for value in self.ctx.equivalent_sites_data.values()}
-            elements_list = orm.List(list(symbols))
         voight_gamma = self.inputs.voight_gamma
         voight_sigma = self.inputs.voight_sigma
 
         equivalent_sites_data = orm.Dict(dict=self.ctx.equivalent_sites_data)
-        result = get_spectra_by_element(elements_list, equivalent_sites_data, voight_gamma, voight_sigma, **kwargs)
-        final_spectra_cls = {}
-        final_spectra_be = {}
-        chemical_shifts = {}
-        binding_energies = {}
-        for key, value in result.items():
-            if key.endswith('cls_spectra'):
-                final_spectra_cls[key] = value
-            elif key.endswith('be_spectra'):
-                final_spectra_be[key] = value
-            elif key.endswith('cls'):
-                chemical_shifts[key] = value
-            elif key.endswith('be'):
-                binding_energies[key] = value
-        self.out('chemical_shifts', chemical_shifts)
-        self.out('final_spectra_cls', final_spectra_cls)
-        if self.inputs.calc_binding_energy:
-            self.out('binding_energies', binding_energies)
-            self.out('final_spectra_be', final_spectra_be)
+        result = get_spectra_by_element(orm.Dict(self.ctx.core_levels), equivalent_sites_data, voight_gamma, voight_sigma, **kwargs)
+        self.out_many(result)
 
     def on_terminated(self):
         """Clean the working directories of all child calculations if ``clean_workdir=True`` in the inputs."""
