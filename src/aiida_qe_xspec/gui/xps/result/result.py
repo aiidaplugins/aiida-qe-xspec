@@ -3,7 +3,7 @@
 import ipywidgets as ipw
 import plotly.graph_objects as go
 from aiidalab_qe.common.panel import ResultsPanel
-
+from aiidalab_qe.common.infobox import InAppGuide
 from .model import XpsResultsModel
 
 
@@ -148,6 +148,7 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
         self.plot.layout.xaxis.autorange = 'reversed'
 
         self.results_container.children = [
+            InAppGuide(identifier='xps-container-results'),
             spectra_type,
             ipw.HBox(
                 children=[

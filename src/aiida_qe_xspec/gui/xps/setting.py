@@ -2,7 +2,7 @@
 
 import ipywidgets as ipw
 from aiidalab_qe.common.panel import ConfigurationSettingsPanel
-
+from aiidalab_qe.common.infobox import InAppGuide
 from .model import BASE_URL, XpsConfigurationSettingsModel
 
 
@@ -102,6 +102,7 @@ class XpsConfigurationSettingsPanel(
         )
 
         self.children = [
+            InAppGuide(identifier='xps-settings'),
             ipw.HTML('<h4>Structure</h4>'),
             ipw.HTML(
                 """

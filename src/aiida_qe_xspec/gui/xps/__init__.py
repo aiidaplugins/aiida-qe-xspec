@@ -6,6 +6,7 @@ from .result import XpsResultsModel, XpsResultsPanel
 from .setting import XpsConfigurationSettingsPanel
 from .structure_examples import structure_examples
 from .workchain import workchain_and_builder
+from pathlib import Path
 
 
 class XpsPluginOutline(PluginOutline):
@@ -28,4 +29,8 @@ xps = {
         'model': XpsResultsModel,
     },
     'workchain': workchain_and_builder,
+    'guides': {
+        'title': 'XPS',
+        'path': Path(__file__).resolve().parent / 'guides',
+    },
 }

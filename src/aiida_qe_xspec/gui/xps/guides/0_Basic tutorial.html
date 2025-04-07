@@ -1,0 +1,196 @@
+<div id="guide-header">
+    You've activated the XPS in-app guide. In this guide, you will learn how to
+    use the app to compute the XPS of Phenylacetylene molecule. <br>
+    Click on <b>Step 1: Select structure</b> and follow the instructions to proceed.
+  </div>
+
+  <div id="structure-step">
+    In the structure selection step, we select the Phenylacetylene molecule from the examples. <br>
+    Once selected, we can inspect the structure in the viewer below.
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+    <ul>
+      <li><b>Click</b> on the "From examples" tab and select the "XPS" category</li>
+      <li><b>Select</b> the Phenylacetylene molecule in the dropdown menu</li>
+      <li>Click the <b>Confirm</b> button to proceed</li>
+    </ul>
+      <div class="alert alert-warning">
+        <b>Warning:</b> Changes after confirmation will reset the following steps.
+      </div>
+    </div>
+  </div>
+
+  <div id="configuration-step">
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+      <ol>
+        <li>Select <b>Structure as is</b> (we skip the relaxation here)</li>
+        <li>Open <b>step 2.1</b> for further instructions</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="properties-selection">
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+      <ol>
+        <li>Check (activate) <b>X-ray photoelectron spectroscopy (XPS)</b></li>
+        <li>Open <b>step 2.2</b> for further instructions</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="calculation-settings">
+    Here we can customize the calculation parameters. The settings are divided
+    into several tabs:
+    <ul>
+      <li><b>Basic settings</b>: top-level calculation settings</li>
+      <li><b>Advanced settings</b>: fine-tune the calculations</li>
+      <li>
+        <b>Plugin settings</b>: parameters for plugin calculations, e.g. the XPS plugin
+      </li>
+    </ul>
+    Note that the app pre-configures defaults for most parameters.
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+        <ol>
+          <li>Select <b>Insulator</b> electronic type</li>
+          <li>Select <b>Fast</b> protocol</li>
+          <li>Open the <b>Advanced settings</b> tab it and follow the instructions there.</li>
+          <li>Open the <b>XPS</b> tab it and follow the instructions there.</li>
+        </ol>
+    </div>
+  </div>
+
+  <div id="advanced-settings">
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+        <ol>
+          <li>Navigate to Exchange-correlation functional</li>
+          <li>Select <b>PBE</b></li>
+        </ol>
+    </div>
+  </div>
+
+  <div id="xps-settings">
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+        <ol>
+          <li>Select <b>Molecule</b> structure</li>
+          <li>select <b>C_1s</b> by ticking the appropriate box</li>
+        </ol>
+    </div>
+  </div>
+
+  <div id="submission-step">
+    <p>
+      In the submission step, we define the computational resources to be used in
+      the calculations. The global resources are used to define resources across
+      all workflow calculations. Optionally, you can override the resource
+      settings for specific calculations.
+    </p>
+    <div class="alert alert-warning">
+      <b>Warning:</b> If running locally (for example, on the AiiDAlab demo
+      server), we recommend keeping nodes and CPUs at the default minimum of 1
+      each.
+    </div>
+    <p>
+      Once the resources are defined, we can optionally customize the workflow
+      label (pre-filled according to the settings of steps 1 & 2), as well as
+      provide a detailed description of the workflow. Once we are ready, we can
+      submit the workflow.
+
+      You first need to select which code (code executable + computer where this
+      will run) to use for each step of the workflow. The Quantum ESPRESSO app
+      should always install a local Quantum ESPRESSO executable that is sufficient
+      for this tutorial, but you can setup additional codes installed on remote
+      supercomputers. For more information on how to set up codes, please refer to the
+      corresponding
+      <a
+        href="https://aiidalab-qe.readthedocs.io/howto/setup_computer_code.html#"
+        target="_blank"
+      >
+        documentation</a
+      >.
+    </p>
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+      <ol>
+        <li>Check that the the default options in the "Global resources" panel are the expected ones.
+          Specifically: select 1 node and 1 CPU for each of the codes. Unless you want to run elsewhere,
+          use the default codes on the AiiDAlab server (ending with `@localhost`)
+          that are available from the dropdown menus.</li>
+        <li><b>(Optional)</b> customize the workflow label</li>
+        <li><b>(Optional)</b> add a workflow description</li>
+        <li>Click the <b>Submit</b> button to proceed</li>
+      </ol>
+      <div class="alert alert-warning">
+        <b>Warning:</b> The workflow may take a moment to submit.
+      </div>
+    </div>
+  </div>
+
+  <div id="results-step">
+    Below you can monitor the status of the calculation, that might take
+    several minutes to conclude even if we are using the fast protocol.
+    A summary of calculation parameters is also provided. Raw input and output files
+    may be downloaded upon workflow completion, as well as an AiiDA archive containing
+    the full calculation provenance (that can be reimported by other AiiDAlab users and
+    allows to reload the calculation).
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+      <ol>
+        <li>If not already there, switch over to the <b>Status</b> panel</li>
+        <li>
+          Monitor the calculation status. Once the calculation is complete, switch over to the <b>Results</b> panel for further
+          instructions
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="results-panel">
+    Here in the results panel, each tab will open results pertaining to a specific
+    calculation submitted by the workflow.
+    <div class="alert alert-success">
+      See further instructions below in the <b>XPS</b> tab.
+    </div>
+  </div>
+
+  <div id="xps-results">
+    When XPS results are available, the <b>Load results</b> button will become active allowing us to
+    load the results from AiiDA.
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+      <ol>
+        <li>
+          Once the calculation is complete, click on the
+          <b>Load results</b> button to load the available results
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="xps-container-results">
+    <div class="alert alert-success">
+      <h4>Tasks</h4>
+      <ol>
+        <li>
+          Click the <b>Binding energy</b> button to view the calculated binding energies.
+        </li>
+      </ol>
+    </div>
+  </div>
+
+
+<div id="post-guide">
+  <h4>Post-guide exercises</h4>
+  <ol>
+    <li>
+      Explore the online documentation for a more detailed tutorial:
+      <a href="https://aiida-qe-xspec.readthedocs.io/en/latest/howto/xps_qeapp.html" target="_blank">
+        XPS with QEApp – AiiDA-QE-XSpec Documentation
+      </a>
+    </li>
+  </ol>
+</div>
