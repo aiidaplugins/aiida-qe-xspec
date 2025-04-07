@@ -116,8 +116,9 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
             # TODO What if the group does not exist? Should we proceed? Can this happen?
 
     def _update_pseudos(self):
+        from aiida_qe_xspec.utils import install_xps_pseudos
         if not self._pseudo_group_exists():
-            self._install_pseudos()
+            install_xps_pseudos()
 
     def _pseudo_group_exists(self, _=None):
         groups = (
@@ -129,18 +130,3 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
             .all(flat=True)
         )
         return len(groups) and [len(group.nodes) for group in groups]
-
-    def _install_pseudos(self):
-        import os
-        from pathlib import Path
-        from subprocess import run
-
-        url = BASE_URL + self.pseudo_group + '.aiida'
-
-        env = os.environ.copy()
-        env['PATH'] = f"{env['PATH']}:{Path.home().joinpath('.local', 'bin')}"
-
-        def run_(*args, **kwargs):
-            return run(*args, env=env, capture_output=True, check=True, **kwargs)
-
-        run_(['verdi', 'archive', 'import', url, '--no-import-group'])
