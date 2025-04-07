@@ -11,8 +11,8 @@ from aiidalab_qe.utils import (
 # supercell min parameter for different protocols
 supercell_min_parameter_map = {
     'fast': 4.0,
-    'moderate': 8.0,
-    'precise': 12.0,
+    'balanced': 8.0,
+    'stringent': 12.0,
 }
 
 
