@@ -20,8 +20,9 @@ classifiers = [
   'Topic :: Scientific/Engineering'
 ]
 dependencies = [
-  'aiida-core>=2.3',
-  'aiida-quantumespresso>=4.5'
+  'aiida-core>=2.6',
+  'aiida-quantumespresso>=4.10',
+  'gitpython'
 ]
 dynamic = ['description', 'version']
 keywords = ['aiida', 'workflows', 'core-level', 'spectroscopy']

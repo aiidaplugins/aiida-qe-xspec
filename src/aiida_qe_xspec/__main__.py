@@ -22,10 +22,12 @@ def setup_pseudos():
     help='Set up core-hole pseudo-potential'
 )
 def post_install():
-    from aiida_qe_xspec.utils import install_xps_pseudos
+    from aiida_qe_xspec.utils import download_data, install_xps_pseudos, install_xas_pseudos
 
     load_profile()
+    download_data()
     install_xps_pseudos()
+    install_xas_pseudos()
 
 
 if __name__ == '__main__':
