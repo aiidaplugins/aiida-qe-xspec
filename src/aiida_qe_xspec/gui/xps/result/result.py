@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from aiidalab_qe.common.panel import ResultsPanel
 from aiidalab_qe.common.infobox import InAppGuide
 from .model import XpsResultsModel
+from weas_widget import WeasWidget
 
 
 class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
@@ -62,7 +63,7 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
 
         self.intensity = ipw.FloatText(
             min=0.001,
-            description='Adjustable Intensity Factor',
+            description='Intensity factor',
             style={'description_width': 'initial'},
         )
         ipw.link(
@@ -106,9 +107,7 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
 
         upload_container = ipw.VBox(
             children=[
-                upload_description,
-                upload_btn,
-                self.intensity,
+                ipw.HBox([upload_description, upload_btn]),
             ],
         )
 
@@ -147,6 +146,20 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
         self.plot.layout.xaxis.title = 'Chemical shift (eV)'
         self.plot.layout.xaxis.autorange = 'reversed'
 
+        gui_config = {
+            'components': {'enabled': True, 'atomsControl': True, 'buttons': True},
+            'buttons': {
+                'enabled': True,
+                'fullscreen': True,
+                'download': True,
+                'measurement': True,
+            },
+        }
+
+        self.structure_view = WeasWidget(
+            guiConfig=gui_config, viewerStyle={'width': '100%', 'height': '400px'}
+        )
+
         self.results_container.children = [
             InAppGuide(identifier='xps-container-results'),
             spectra_type,
@@ -170,8 +183,10 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
             """
             ),
             parameters_container,
-            self.plot,
+            self.intensity,
             upload_container,
+            self.plot,
+            self.structure_view,
         ]
         self.rendered = True
         self._post_render()
@@ -179,6 +194,8 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
 
     def _post_render(self):
         self._model.update_spectrum_options()
+        self._setup_structure_view()
+
 
     def _update_plot(self, _):
         if not self.rendered:
@@ -217,3 +234,8 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
             x = self._model.experimental_data[0]
             y = self._model.experimental_data[1]
             self.plot.add_scatter(x=x, y=y, mode='lines', name='Experimental Data')
+
+    def _setup_structure_view(self):
+        if self._model.structure:
+            ase_atoms = self._model.structure.get_ase()
+            self.structure_view.from_ase(ase_atoms)

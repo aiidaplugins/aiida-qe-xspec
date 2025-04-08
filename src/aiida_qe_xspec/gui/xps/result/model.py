@@ -1,6 +1,6 @@
 import traitlets as tl
 from aiidalab_qe.common.panel import ResultsModel
-
+from aiida import orm
 from .utils import export_xps_data, xps_spectra_broadening
 
 
@@ -31,10 +31,16 @@ class XpsResultsModel(ResultsModel):
     binding_energies = {}
     equivalent_sites_data = {}
     experimental_data = None
+    structure = tl.Instance(orm.StructureData, allow_none=True)
+
 
     _this_process_label = 'XpsWorkChain'
 
     def update_spectrum_options(self):
+        root = self.fetch_process_node()
+
+        self.structure = root.inputs.xps.structure
+
         outputs = self._get_child_outputs()
         (
             self.chemical_shifts,
