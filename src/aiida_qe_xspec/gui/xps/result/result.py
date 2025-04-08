@@ -6,6 +6,7 @@ from aiidalab_qe.common.panel import ResultsPanel
 from aiidalab_qe.common.infobox import InAppGuide
 from .model import XpsResultsModel
 from weas_widget import WeasWidget
+from table_widget import TableWidget
 
 
 class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
@@ -15,6 +16,19 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
         self._model.upload_experimental_data(change['new'])
 
     def _render(self):
+        self.result_table = TableWidget()
+        self.result_table.observe(self._on_row_index_change, 'selectedRowId')
+        self.table_help = ipw.HTML(
+            """
+            <div style='margin: 10px 0;'>
+                <h4 style='margin-bottom: 5px; color: #3178C6;'>Result</h4>
+                <p style='margin: 5px 0; font-size: 14px;'>
+                    Click on the row to highlight the specific atom for the selected site.
+                </p>
+            </div>
+            """,
+            layout=ipw.Layout(margin='0 0 10px 0'),
+        )
         spectra_type = ipw.ToggleButtons()
         ipw.dlink(
             (self._model, 'spectra_type_options'),
@@ -186,7 +200,19 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
             self.intensity,
             upload_container,
             self.plot,
-            self.structure_view,
+            ipw.HBox(
+            children=[
+                ipw.VBox(
+                    [self.table_help, self.result_table],
+                    layout=ipw.Layout(width='50%', margin='0 10px 0 0'),
+                ),
+                ipw.VBox(
+                    [self.structure_view],
+                    layout=ipw.Layout(width='50%'),
+                ),
+            ],
+            layout=ipw.Layout(justify_content='space-between', margin='10px'),
+        )
         ]
         self.rendered = True
         self._post_render()
@@ -194,8 +220,12 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
 
     def _post_render(self):
         self._model.update_spectrum_options()
+        self._populate_table()
         self._setup_structure_view()
 
+    def _on_spectrum_select_change(self, change):
+        self._update_plot(change)
+        self._populate_table()
 
     def _update_plot(self, _):
         if not self.rendered:
@@ -235,7 +265,45 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
             y = self._model.experimental_data[1]
             self.plot.add_scatter(x=x, y=y, mode='lines', name='Experimental Data')
 
+    def _populate_table(self):
+        columns = [
+            {'field': 'site_index', 'headerName': 'Site', 'editable': False},
+            {'field': 'element', 'headerName': 'Symbol', 'editable': False},
+            {
+                'field': 'chemical_shift',
+                'headerName': 'Chemical shift (eV)',
+                'editable': False,
+            },
+            {'field': 'binding_energy', 'headerName': 'Binding energy (eV)', 'editable': False},
+        ]
+        data = []
+
+        element, orbital = self.spectrum_select.value.split('_')
+
+        for key, value in self._model.binding_energies[element][orbital].items():
+            site_index = key.split('_')[-1]
+            data.append(
+                {
+                    'site_index': site_index,
+                    'element': element,
+                    'chemical_shift': round(self._model.chemical_shifts[element][orbital][key]['energy'], 2),
+                    'binding_energy': round(value['energy'], 2),
+                }
+            )
+
+        self.result_table.from_data(
+            data,
+            columns=columns,
+        )
+
     def _setup_structure_view(self):
         if self._model.structure:
             ase_atoms = self._model.structure.get_ase()
             self.structure_view.from_ase(ase_atoms)
+
+    def _on_row_index_change(self, change):
+        if change['new'] is not None:
+            row_index = int(change['new'])
+            # The first row is the header, so we do +1 offset.
+            site_idx = self.result_table.data[row_index]['site_index']
+            self.structure_view.avr.selected_atoms_indices = [site_idx]
