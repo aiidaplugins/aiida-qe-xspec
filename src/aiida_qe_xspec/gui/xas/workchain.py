@@ -12,9 +12,6 @@ from aiidalab_qe.utils import (
 )
 
 XspectraCrystalWorkChain = WorkflowFactory('xspec.xspectra.crystal')
-PSEUDO_TOC = yaml.safe_load(resources.read_text(xas_folder, 'pseudo_toc.yaml'))
-pseudo_data_dict = PSEUDO_TOC['pseudos']
-xch_elements = PSEUDO_TOC['xas_xch_elements']
 
 
 def update_resources(builder, codes):

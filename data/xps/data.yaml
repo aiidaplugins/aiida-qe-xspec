@@ -1,0 +1,95 @@
+pbe:
+  C:
+    ground:
+      pseudo: C.pbe-n-kjgipaw_psl.1.0.0.UPF
+    1s:
+      pseudo: C.star1s.pbe-n-kjgipaw_psl.1.0.0.UPF
+      core: 345.99
+      exp: 6.2
+  O:
+    ground:
+      pseudo: O.pbe-n-kjpaw_psl.0.1.UPF
+    1s:
+      pseudo: O.star1s.pbe-n-kjpaw_psl.0.1.UPF
+      core: 676.47
+      exp: 8.25
+  F:
+    ground:
+      pseudo: F.pbe-n-rrkjus_psl.1.0.0.UPF
+    1s:
+      pseudo: F.star1s.pbe-n-rrkjus_psl.1.0.0.UPF
+      core: 964.49
+      exp: 8.76
+  Al:
+    ground:
+      pseudo: Al.pbe-n-kjpaw_psl.1.0.0.UPF
+    1s:
+      pseudo: Al.star1s.pbe-n-kjpaw_psl.1.0.0.UPF
+      core: 1518.36
+      exp: 11.49
+    2s:
+      pseudo: Al.star2s.pbe-n-kjpaw_psl.1.0.0.UPF
+      core: 126.36
+      exp: -6.46
+    2p:
+      pseudo: Al.star2p.pbe-n-kjpaw_psl.1.0.0.UPF
+      core: 89.82
+      exp: 0.74
+  Si:
+    ground:
+      pseudo: Si.pbe-n-rrkjgipaw_psl.1.0.0.UPF
+    2p:
+      pseudo: Si.star2p.pbe-n-rrkjgipaw_psl.1.0.0.UPF
+      core: 153.76
+      exp: 0.57
+  Cu:
+    ground:
+      pseudo: Cu.pbe-dn-kjpaw_psl.1.0.0.UPF
+    2p:
+      pseudo: Cu.star2p.pbe-dn-kjpaw_psl.1.0.0.UPF
+      core: 1208.28
+      exp: 0
+  Co:
+    ground:
+      pseudo: Co.pbe-spn-kjpaw_psl.0.3.1.UPF
+    2p:
+      pseudo: Co.star2p.pbe-spn-kjpaw_psl.0.3.1.UPF
+      core: 1307.59
+      exp: 0
+  Pt:
+    ground:
+      pseudo: Pt.pbe-n-kjpaw_psl.1.0.0.UPF
+    4f:
+      pseudo: Pt.star4f.pbe-n-kjpaw_psl.1.0.0.UPF
+      core: 207.61
+      exp: 0
+  Au:
+    ground:
+      pseudo: Au.pbe-n-kjpaw_psl.1.0.0.UPF
+    4f:
+      pseudo: Au.star4f.pbe-n-kjpaw_psl.1.0.0.UPF
+      core: 243.54
+      exp: 0
+  W:
+    ground:
+      pseudo: W.pbe-spn-kjpaw_psl.1.0.0.UPF
+    4f:
+      pseudo: W.star4f.pbe-spn-kjpaw_psl.1.0.0.UPF
+      core: 266.5
+      exp: 0
+
+pbesol:
+  Pt:
+    ground:
+      pseudo: Pt.pbesol-n-rrkjus_psl.1.0.0.UPF
+    4f:
+      pseudo: Pt.star4f.pbesol-n-rrkjus_psl.1.0.0.UPF
+      core: 248.14
+      exp: 0
+  O:
+    ground:
+      pseudo: O.pbesol-n-rrkjus_psl.1.0.0.UPF
+    1s:
+      pseudo: O.start1s.pbesol-n-rrkjus_psl.1.0.0.UPF
+      core: 744.33
+      exp: 0

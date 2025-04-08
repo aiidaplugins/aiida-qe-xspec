@@ -27,11 +27,11 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
     pseudo_group_options = tl.List(
         trait=tl.Unicode(),
         default_value=[
-            'pseudo_demo_pbe',
-            'pseudo_demo_pbesol',
+            'xps_pbe',
+            'xps_pbesol',
         ],
     )
-    pseudo_group = tl.Unicode('pseudo_demo_pbe')
+    pseudo_group = tl.Unicode('xps_pbe')
     structure_type_options = tl.List(
         trait=tl.List(tl.Unicode()),
         default_value=[
@@ -60,8 +60,6 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
     def update(self, specific=''):
         with self.hold_trait_notifications():
             self._update_correction_energies()
-            if not specific or specific == 'pseudo_group':
-                self._update_pseudos()
 
     def get_supported_core_levels(self):
         supported_core_levels = {}
@@ -114,19 +112,3 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         except NotExistent:
             self.correction_energies = {}
             # TODO What if the group does not exist? Should we proceed? Can this happen?
-
-    def _update_pseudos(self):
-        from aiida_qe_xspec.utils import install_xps_pseudos
-        if not self._pseudo_group_exists():
-            install_xps_pseudos()
-
-    def _pseudo_group_exists(self, _=None):
-        groups = (
-            QueryBuilder()
-            .append(
-                Group,
-                filters={'label': self.pseudo_group},
-            )
-            .all(flat=True)
-        )
-        return len(groups) and [len(group.nodes) for group in groups]

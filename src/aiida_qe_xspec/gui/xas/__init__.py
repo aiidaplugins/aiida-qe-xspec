@@ -12,14 +12,6 @@ from .setting import XasConfigurationSettingsPanel
 from .structure_examples import structure_examples
 from .workchain import workchain_and_builder
 
-PSEUDO_TOC = yaml.safe_load(
-    importlib_resources.read_text(
-        xas_folder,
-        'pseudo_toc.yaml',
-    )
-)
-
-
 class XasPluginOutline(PluginOutline):
     title = 'X-ray absorption spectroscopy (XAS)'
 
