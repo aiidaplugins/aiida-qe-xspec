@@ -94,8 +94,8 @@ class XpsResultsModel(ResultsModel):
 
         self.experimental_data = df
         # Calculate an initial guess for the intensity factor
-        total = self.spectra[self._model.spectrum]['total']
+        total = self.spectra[self.spectrum]['total']
         # Align the max value of the total spectra with the max value of the experimental data
         max_exp = max(self.experimental_data[1])
         max_total = max(total[1])
-        self._model.intensity = max_exp / max_total
+        self.intensity = max_exp / max_total
