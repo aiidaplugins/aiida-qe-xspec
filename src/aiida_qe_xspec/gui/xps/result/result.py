@@ -260,7 +260,7 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
         """Plot the experimental data alongside the calculated data."""
         if not self.rendered:
             return
-        if self._model.experimental_data:
+        if self._model.experimental_data is not None:
             x = self._model.experimental_data[0]
             y = self._model.experimental_data[1]
             self.plot.add_scatter(x=x, y=y, mode='lines', name='Experimental Data')
