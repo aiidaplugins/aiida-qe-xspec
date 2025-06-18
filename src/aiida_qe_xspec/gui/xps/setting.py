@@ -100,6 +100,16 @@ class XpsConfigurationSettingsPanel(
             (self._model, 'calc_binding_energy'),
             (self.calc_binding_energy, 'value'),
         )
+        self.band_gap_correction = ipw.FloatText(
+            description='The band gap correction for insulator (eV):',
+            disabled=False,
+            style={'description_width': 'initial'},
+        )
+        ipw.link(
+            (self._model, 'band_gap_correction'),
+            (self.band_gap_correction, 'value'),
+        )
+
 
         self.children = [
             InAppGuide(identifier='xps-settings'),
@@ -155,6 +165,18 @@ class XpsConfigurationSettingsPanel(
                     self.atom_indices_container,
                 ]
             ),
+            ipw.HTML(
+                f"""
+                <div style="line-height: 140%; margin-bottom: 10px">
+                    <h4>Band gap correction</h4>
+                    For insulators, XCH binding energies need to be corrected by subtracting <b>half of the band gap</b>.<br>
+                    Please enter the value of the band gap here. It can be:<br>
+                    - An <i>experimental</i> band gap (e.g. from literature), or<br>
+                    - A <i>theoretical</i> band gap obtained from a separate calculation (e.g. using this app).<br>
+                </div>
+            """
+            ),
+            self.band_gap_correction,
         ]
 
         self.rendered = True
