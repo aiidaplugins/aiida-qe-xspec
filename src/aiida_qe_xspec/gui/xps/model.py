@@ -36,10 +36,10 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         trait=tl.List(tl.Unicode()),
         default_value=[
             ['Molecule', 'molecule'],
-            ['Crystal', 'crystal'],
+            ['Solid', 'solid'],
         ],
     )
-    structure_type = tl.Unicode('crystal')
+    structure_type = tl.Unicode('solid')
     supercell_min_parameter = tl.Float(8.0)
     calc_binding_energy = tl.Bool(False)
     correction_energies = tl.Dict(

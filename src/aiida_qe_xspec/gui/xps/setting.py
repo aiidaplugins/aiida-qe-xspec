@@ -108,7 +108,7 @@ class XpsConfigurationSettingsPanel(
                 """
                 <div style="line-height: 140%; margin-bottom: 10px">
                     Below you can indicate if the material should be treated as a
-                    molecule or a crystal.
+                    molecule or a solid.
                 </div>
             """
             ),
