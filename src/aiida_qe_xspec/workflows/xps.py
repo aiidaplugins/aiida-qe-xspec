@@ -355,6 +355,7 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         spec.output(
             'binding_energies',
             valid_type=orm.Dict,
+            required=False,
             help='All the binding energy values for each element calculated by the WorkChain.'
         )
         spec.output_namespace(
@@ -366,6 +367,7 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         spec.output_namespace(
             'binding_energy_spectra',
             valid_type=orm.XyData,
+            required=False,
             dynamic=True,
             help='The fully-resolved spectra for each element based on binding energy.'
         )
@@ -543,7 +545,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
                 kpoints_mesh = DataFactory('core.array.kpoints')()
                 kpoints_mesh.set_kpoints_mesh([1, 1, 1])
                 builder.ch_scf.kpoints = kpoints_mesh
-                builder.relax.base.pw.settings = orm.Dict(dict={'gamma_only': True})
+                builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
         # pylint: enable=no-member
         return builder
 
