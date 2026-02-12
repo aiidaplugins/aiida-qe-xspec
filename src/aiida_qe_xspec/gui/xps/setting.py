@@ -47,6 +47,13 @@ class XpsConfigurationSettingsPanel(
             (self._model, 'pseudo_group'),
             (self.pseudo_group, 'value'),
         )
+        # Selection mode toggle: choose between core-level and atom indices
+        self.selection_mode = ipw.ToggleButtons(
+            options=['Core-level', 'Atom indices'],
+            description='Select by:',
+            style={'description_width': 'initial'}
+        )
+        self.selection_mode.observe(self._on_selection_mode_change, names='value')
 
         self.core_levels_widget = ipw.VBox()
         self.atom_indices_input = ipw.Text(
@@ -62,11 +69,20 @@ class XpsConfigurationSettingsPanel(
                 lambda value: [int(i.strip()) for i in value.split(',') if i.strip()],
             ],
         )
+        self.core_levels_container = ipw.VBox([
+            ipw.HTML(
+                """
+                <div style="line-height: 140%;">
+                    The list of core-levels to be considered for analysis.
+                </div>
+            """
+            ),
+            self.core_levels_widget,
+        ])
         self.atom_indices_container = ipw.VBox([
             ipw.HTML("""
                      <div style="margin-top: 10px;">
-                    <h4>Select atoms</h4>
-                     Leave empty to calculate for all atoms of selected element.
+                     Input the indices of atoms to be considered for analysis.
                 </div>
                 """),
             self.atom_indices_input,
@@ -100,6 +116,16 @@ class XpsConfigurationSettingsPanel(
             (self._model, 'calc_binding_energy'),
             (self.calc_binding_energy, 'value'),
         )
+        self.band_gap_correction = ipw.FloatText(
+            description='The band gap correction for insulator (eV):',
+            disabled=False,
+            style={'description_width': 'initial'},
+        )
+        ipw.link(
+            (self._model, 'band_gap_correction'),
+            (self.band_gap_correction, 'value'),
+        )
+
 
         self.children = [
             InAppGuide(identifier='xps-settings'),
@@ -108,7 +134,7 @@ class XpsConfigurationSettingsPanel(
                 """
                 <div style="line-height: 140%; margin-bottom: 10px">
                     Below you can indicate if the material should be treated as a
-                    molecule or a crystal.
+                    molecule or a solid.
                 </div>
             """
             ),
@@ -135,28 +161,43 @@ class XpsConfigurationSettingsPanel(
             """
             ),
             self.pseudo_group,
-            ipw.HTML(
-                """
-                <div style="margin-top: 15px;">
-                    <h4>Select core-level</h4>
+            ipw.HTML("""
+                <div style='margin-top: 15px;'>
+                    <h4>Select mode</h4>
                 </div>
-            """
-            ),
-            ipw.HTML(
-                """
-                <div style="line-height: 140%;">
-                    The list of core-levels to be considered for analysis.
+            """),
+            ipw.HTML("""
+                <div style='line-height: 140%; margin-bottom: 10px'>
+                    You have two options:
+                    <ul style='margin-top: 5px;'>
+                        <li><b>Core-level</b>: select by element and orbital (typical for simple, symmetric systems).</li>
+                        <li><b>Atom indices</b>: select specific atoms by index (useful for large or low-symmetry systems, e.g., surfaces or supported nanoparticles).</li>
+                    </ul>
                 </div>
-            """
-            ),
+            """),
+            self.selection_mode,
             ipw.VBox(
                 children=[
-                    self.core_levels_widget,
+                    self.core_levels_container,
                     self.atom_indices_container,
                 ]
             ),
+            ipw.HTML(
+                f"""
+                <div style="line-height: 140%; margin-bottom: 10px">
+                    <h4>Band gap correction</h4>
+                    For insulators, XCH binding energies need to be corrected by subtracting <b>half of the band gap</b>.<br>
+                    Please enter the value of the band gap here. It can be:<br>
+                    - An <i>experimental</i> band gap (e.g. from literature), or<br>
+                    - A <i>theoretical</i> band gap obtained from a separate calculation (e.g. using this app).<br>
+                </div>
+            """
+            ),
+            self.band_gap_correction,
         ]
 
+        # Initial build and visibility
+        self._on_selection_mode_change({'new': self.selection_mode.value})
         self.rendered = True
 
         self.refresh(specific='widgets')
@@ -166,6 +207,16 @@ class XpsConfigurationSettingsPanel(
 
     def _on_pseudo_group_change(self, _):
         self.refresh(specific='pseudos')
+
+    def _on_selection_mode_change(self, change):
+        mode = change.get('new', self.selection_mode.value)
+        # Show only the selected widget
+        if mode == 'Core-level':
+            self.core_levels_container.layout.display = None
+            self.atom_indices_container.layout.display = 'none'
+        else:
+            self.core_levels_container.layout.display = 'none'
+            self.atom_indices_container.layout.display = None
 
     def update(self, specific=''):
         if self.updated:
