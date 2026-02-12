@@ -8,6 +8,8 @@ pseudos:
       Li: Li.pbe-s-rrkjus-gipaw.UPF
       O: O.pbe-n-kjpaw_gipaw.UPF
       Si: Si.pbe-van_gipaw.UPF
+      Co: Co.pbe-spn-kjpaw_psl.0.3.1.UPF
+      Sn: Sn.pbe-dn-kjpaw_psl.1.0.0.UPF
     core_wavefunction_data:
       C: C.pbe-n-kjgipaw_psl.1.0.0.dat
       Cu: Cu.pbe-n-van_gipaw.dat
@@ -15,6 +17,8 @@ pseudos:
       Li: Li.pbe-s-rrkjus-gipaw.dat
       O: O.pbe-n-kjpaw_gipaw.dat
       Si: Si.pbe-van_gipaw.dat
+      Co: Co.pbe-spn-kjpaw.dat
+      Sn: Sn.pbe-dn-kjpaw.dat
     core_hole_pseudos:
       1s:
         C: C.star1s.pbe-n-kjgipaw_psl.1.0.0.UPF
@@ -23,3 +27,5 @@ pseudos:
         Li: Li.star1s-pbe-s-rrkjus-gipaw-test_2.UPF
         O: O.star1s.pbe-n-kjpaw_gipaw.UPF
         Si: Si.star1s-pbe-van_gipaw.UPF
+        Co: Co.star1s.pbe-spn-kjpaw_psl.0.3.1.UPF
+        Sn: Sn.star1s.pbe-dn-kjpaw_psl.1.0.0.UPF
