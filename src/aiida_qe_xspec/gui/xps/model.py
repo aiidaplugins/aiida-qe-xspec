@@ -36,10 +36,10 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         trait=tl.List(tl.Unicode()),
         default_value=[
             ['Molecule', 'molecule'],
-            ['Crystal', 'crystal'],
+            ['Solid', 'solid'],
         ],
     )
-    structure_type = tl.Unicode('crystal')
+    structure_type = tl.Unicode('solid')
     supercell_min_parameter = tl.Float(8.0)
     calc_binding_energy = tl.Bool(False)
     correction_energies = tl.Dict(
@@ -56,6 +56,7 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         default_value={},
     )
     atom_indices = tl.List(trait=tl.Int(), default_value=[])
+    band_gap_correction = tl.Float(0.0)
 
     def update(self, specific=''):
         with self.hold_trait_notifications():
@@ -79,6 +80,7 @@ class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
             'correction_energies': self.correction_energies,
             'core_levels': self.core_levels,
             'atom_indices': self.atom_indices,
+            'band_gap_correction': self.band_gap_correction,
         }
 
     def set_model_state(self, parameters: dict):

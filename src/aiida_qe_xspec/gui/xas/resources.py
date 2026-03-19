@@ -25,7 +25,8 @@ class XasResourceSettingsModel(PluginResourceSettingsModel):
                 'xspectra': CodeModel(
                     name='xspectra.x',
                     description='xspectra.x',
-                    default_calc_job_plugin='quantumespresso.xspectra',
+                    default_calc_job_plugin='xspec.xspectra',
+                    # default_calc_job_plugin='quantumespresso.xspectra',
                 ),
             }
         )

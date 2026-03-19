@@ -32,7 +32,11 @@ def get_builder(codes, structure, parameters, **kwargs):
     # load pseudo for excited-state and group-state.
     pseudo_group = xps_parameters.pop('pseudo_group')
     core_hole_pseudos, correction_energies = load_core_hole_pseudos(core_levels, pseudo_group)
-
+    # update the correction energies by the band gap correction
+    band_gap_correction = xps_parameters.pop('band_gap_correction', 0.0)
+    for element, levels in correction_energies.items():
+        for level, energy in levels.items():
+            correction_energies[element][level] = energy - band_gap_correction
     #
     is_molecule_input = True if xps_parameters.get('structure_type') == 'molecule' else False
     # set core hole treatment based on electronic type
