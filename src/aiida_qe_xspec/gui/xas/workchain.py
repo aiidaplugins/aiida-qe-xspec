@@ -38,11 +38,17 @@ def get_builder(codes, structure, parameters, **kwargs):
     core_wfc_data_labels = xas_parameters['core_wfc_data_labels']
     pseudos = {}
     # Convert the pseudo and core_wfc_data node labels into nodes:
-    core_wfc_data = {k: orm.load_node(v) for k, v in core_wfc_data_labels.items()}
+    # Note that this method will need to be extended if core-hole pseudos
+    # and associated data for other functionals are added
+    core_wfc_data = {}
+    pseudos = {e : {} for e in elements_list}
     for element in elements_list:
-        pseudos[element] = {
-            k: orm.load_node(v) for k, v in pseudo_labels[element].items()
-        }
+        for node in orm.load_group('xas_pbe').nodes:
+            if node.label in core_wfc_data_labels.values() and node.label not in core_wfc_data:
+                core_wfc_data[element] = node
+        pseudo_nodes_for_element = {n.label : n for n in orm.load_group('xas_pbe').nodes if n.label in pseudo_labels[element].values()}
+        pseudos[element]['core_hole'] = pseudo_nodes_for_element[pseudo_labels[element]['core_hole']]
+        pseudos[element]['gipaw'] = pseudo_nodes_for_element[pseudo_labels[element]['gipaw']]
 
     # TODO should we override the cutoff_wfc, cutoff_rho by the new pseudo?
     # In principle we should, if we know what that value is, but that would

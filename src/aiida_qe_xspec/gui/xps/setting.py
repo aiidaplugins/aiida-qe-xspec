@@ -219,10 +219,10 @@ class XpsConfigurationSettingsPanel(
             self.atom_indices_container.layout.display = None
 
     def update(self, specific=''):
-        if self.updated:
+        if self._model.updated:
             return
         self._show_loading()
-        if not self._model.loaded_from_process or (specific and specific != 'widgets'):
+        if not self._model.locked or (specific and specific != 'widgets'):
             self._model.update(specific)
         self._build_core_levels_widget()
         self.updated = True
@@ -266,7 +266,7 @@ class XpsConfigurationSettingsPanel(
                         (checkbox, 'value'),
                         [get_checked, set_checked],
                     )
-                    self.links.append(link)
+                    self._links.append(link)
                     children.append(checkbox)
             else:
                 checkbox = ipw.Checkbox(

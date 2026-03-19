@@ -37,9 +37,10 @@ class XpsResultsModel(ResultsModel):
     _this_process_label = 'XpsWorkChain'
 
     def update_spectrum_options(self):
-        root = self.fetch_process_node()
+        # root = self.fetch_process_node()
+        xps_node = self.fetch_child_process_node()
 
-        self.structure = root.inputs.xps.structure
+        self.structure = xps_node.inputs.structure
 
         outputs = self._get_child_outputs()
         (

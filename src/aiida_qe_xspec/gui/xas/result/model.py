@@ -30,7 +30,7 @@ class XasResultsModel(ResultsModel):
     _this_process_label = 'XspectraCrystalWorkChain'
 
     def update_spectrum_options(self):
-        if not (process_node := self.fetch_process_node()):
+        if not (process_node := self.fetch_child_process_node().caller):
             return
         outputs = self._get_child_outputs()
         (

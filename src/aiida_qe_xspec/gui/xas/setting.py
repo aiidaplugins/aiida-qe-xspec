@@ -137,10 +137,10 @@ class XasConfigurationSettingsPanel(
         self.refresh(specific='structure')
 
     def update(self, specific=''):
-        if self.updated:
+        if self._model.updated:
             return
         self._show_loading()
-        if not self._model.loaded_from_process or (specific and specific != 'widgets'):
+        if not self._model.locked or (specific and specific != 'widgets'):
             self._model.update(specific)
         self._build_core_hole_treatments_widget()
         self.updated = True
@@ -175,7 +175,7 @@ class XasConfigurationSettingsPanel(
                     },
                 ],
             )
-            self.links.append(link)
+            self._links.append(link)
 
             treatment_selector = ipw.Dropdown(layout=ipw.Layout(width='15%'))
             options_link = ipw.dlink(
@@ -195,7 +195,7 @@ class XasConfigurationSettingsPanel(
                     },
                 ],
             )
-            self.links.extend([options_link, value_link])
+            self._links.extend([options_link, value_link])
 
             widget = ipw.HBox(
                 children=[
