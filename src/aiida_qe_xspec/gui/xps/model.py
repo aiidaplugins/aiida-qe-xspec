@@ -2,17 +2,17 @@ import traitlets as tl
 from aiida.common import NotExistent
 from aiida.orm import load_group
 from aiidalab_qe.common.mixins import HasInputStructure
-from aiidalab_qe.common.panel import ConfigurationSettingsModel
+from aiidalab_qe.common.panel import PanelModel
 
 BASE_URL = 'https://github.com/superstar54/xps-data/raw/main/pseudo_demo/'
 
 
-class XpsConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure):
+class XpsConfigurationSettingsModel(PanelModel, HasInputStructure):
     title = 'XPS'
     identifier = 'xps'
 
     dependencies = [
-        'input_structure',
+        'structure_uuid',
     ]
 
     core_hole_treatment_options = tl.List(
