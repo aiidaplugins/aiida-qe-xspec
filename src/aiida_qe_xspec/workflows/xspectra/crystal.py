@@ -265,6 +265,15 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
         # yapf: disable
 
     @classmethod
+    def get_protocol_filepath(cls):
+        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
+        from importlib_resources import files
+
+        from ..protocols import xspectra as protocols
+        return files(protocols) / 'crystal.yaml'
+    
+
+    @classmethod
     def get_builder_from_protocol( # pylint: disable=too-many-statements
         cls, pw_code, xs_code, structure, pseudos, upf2plotcore_code=None, core_wfc_data=None,
         core_hole_treatments=None, protocol=None, overrides=None, elements_list=None,
@@ -284,7 +293,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
                         use the mapping of {"element" : {"core_hole" : <upf>,"gipaw" : <upf>}}
         :param protocol: the protocol to use. If not specified, the default will be used.
         :param overrides: optional dictionary of inputs to override the defaults of the
-                          XspectraWorkChain itself.
+                          XspectraWorkChain itself. Note that, as 
         :param kwargs: additional keyword arguments that will be passed to the
             ``get_builder_from_protocol`` of all the sub processes that are called by this
             workchain.
@@ -627,7 +636,6 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
             inputs.structure = structure
             abs_site_data = equivalent_sites_data[site]
             abs_element = abs_site_data['symbol']
-            abs_atom_kind = abs_site_data['kind_name']
 
             if 'core_hole_treatments' in self.inputs:
                 ch_treatments = self.inputs.core_hole_treatments.get_dict()
@@ -661,33 +669,6 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
             kinds_present = sorted([kind.name for kind in structure.kinds])
             abs_species_index = kinds_present.index(abs_atom_marker) + 1
             new_xs_params['INPUT_XSPECTRA']['xiabs'] = abs_species_index
-
-            # Set `starting_magnetization` if we are using an XCH approximation, using
-            # the absorbing species as a reasonable place for the unpaired electron.
-            # Alternatively, ensure the starting magnetic moment is a reasonable guess
-            # given the input parameters. (e.g. it conforms to an existing magnetic
-            # structure already defined for the system)
-
-            # # TODO: we need to re-visit the core-hole treatment settings,
-            # # in order to avoid the need for fudges like these and set these at
-            # # submission rather than inside the WorkChain itself.
-            # if 'starting_magnetization' in new_scf_params['SYSTEM']:
-            #     inherited_mag =  new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_kind]
-            #     if ch_treatment not in ['xch_smear', 'xch_fixed']:
-            #         new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] = inherited_mag
-            #     else: # if there is meant to be an unpaired electron, give it to the absorbing atom.
-            #         if inherited_mag == 0: # set it to 1, if it would be neutral in the ground-state.
-            #             new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] =  1
-            #         else: # assume that it takes the same magnetic configuration as the kind that it replaces.
-            #             new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] =  inherited_mag
-            # elif ch_treatment in ['xch_smear', 'xch_fixed']:
-            #     new_scf_params['SYSTEM']['starting_magnetization'] = {abs_atom_marker : 1}
-
-            # # remove any duplicates created from the "core_hole_treatments.yaml" defaults
-            # new_scf_params_keys = list(new_scf_params['SYSTEM'].keys())
-            # for key in new_scf_params_keys:
-            #     if 'starting_magnetization(' in key:
-            #         new_scf_params['SYSTEM'].pop(key, None)
 
             if ch_treatment == 'none':
                 core_hole_pseudo = self.inputs.gipaw_pseudos[abs_element]
