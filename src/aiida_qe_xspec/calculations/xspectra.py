@@ -27,7 +27,7 @@ class XspectraCalculation(NamelistsCalculation):
     _internal_retrieve_list = [_Spectrum_FILENAME]
     _retrieve_singlefile_list = []
     _retrieve_temporary_list = []
-    _default_parser = 'quantumespresso.xspectra'
+    _default_parser = 'xspec.xspectra'
 
     @classmethod
     def define(cls, spec):
@@ -131,7 +131,7 @@ class XspectraCalculation(NamelistsCalculation):
         parent_folder = self.inputs.parent_folder
         parent_calc = parent_folder.creator
 
-        if parent_calc.process_type == 'aiida.calculations:quantumespresso.xspectra':
+        if parent_calc.process_type == 'aiida.calculations:xspec.xspectra':
             calcinfo.remote_copy_list.append((
                 parent_folder.computer.uuid, os.path.join(parent_folder.get_remote_path(),
                                                           self._XSPECTRA_SAVE_FILE), '.'

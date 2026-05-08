@@ -9,7 +9,7 @@ from aiida.orm import UpfData as aiida_core_upf
 from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 from aiida_pseudo.data.pseudo import UpfData as aiida_pseudo_upf
 
-from aiida_quantumespresso.calculations.functions.xspectra.get_spectra_by_element import get_spectra_by_element
+from aiida_qe_xspec.calculations.functions.xspectra.get_spectra_by_element import get_spectra_by_element
 from aiida_quantumespresso.utils.hubbard import HubbardStructureData
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recursive_merge
