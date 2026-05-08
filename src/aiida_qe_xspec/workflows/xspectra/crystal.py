@@ -12,7 +12,7 @@ from aiida_pseudo.data.pseudo import UpfData as aiida_pseudo_upf
 from aiida_qe_xspec.calculations.functions.xspectra.get_spectra_by_element import get_spectra_by_element
 from aiida_quantumespresso.utils.hubbard import HubbardStructureData
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
-from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recursive_merge
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
@@ -265,14 +265,6 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
         # yapf: disable
 
     @classmethod
-    def get_protocol_filepath(cls):
-        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
-        from importlib_resources import files
-
-        from ..protocols import xspectra as protocols
-        return files(protocols) / 'crystal.yaml'
-
-    @classmethod
     def get_builder_from_protocol( # pylint: disable=too-many-statements
         cls, pw_code, xs_code, structure, pseudos, upf2plotcore_code=None, core_wfc_data=None,
         core_hole_treatments=None, protocol=None, overrides=None, elements_list=None,
@@ -302,43 +294,40 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
         inputs = cls.get_protocol_inputs(protocol, overrides)
 
         pw_args = (pw_code, structure, protocol)
+        xs_args = (pw_code, xs_code, structure, protocol)
 
         relax = PwRelaxWorkChain.get_builder_from_protocol(
             *pw_args, overrides=inputs.get('relax', None), options=options, **kwargs
         )
-        core_scf = PwBaseWorkChain.get_builder_from_protocol(
-            *pw_args, overrides=inputs.get('core', {}).get('scf'), options=options, **kwargs
+        # We include a dummy `core_wfc_data` input in order to not trigger
+        # the ValidationError in the method.
+        core = XspectraCoreWorkChain.get_builder_from_protocol(
+            *xs_args,
+            core_wfc_data=core_wfc_data[[k for k in core_wfc_data.keys()][0]],
+            overrides=inputs.get('core', None),
+            options=options,
+            **kwargs,
         )
-        core_xspectra = XspectraBaseWorkChain.get_protocol_inputs(
-            protocol,
-            overrides=inputs.get('core', {}).get('xs_prod')
-        )
-
-        if options:
-            core_xspectra['xspectra']['metadata']['options'] = recursive_merge(
-                core_xspectra['xspectra']['metadata']['options'],
-                options
-            )
 
         relax.pop('clean_workdir', None)
         relax.pop('structure', None)
         relax.pop('base_final_scf', None)
 
+        core.pop('kpoints', None)
+        core.pop('structure', None)
+        core.pop('core_hole_pseudos', None)
+        core.pop('xs_plot', None)
+        core.pop('eps_vectors', None)
+
         abs_atom_marker = orm.Str(inputs['abs_atom_marker'])
         # pylint: disable=no-member
         builder = cls.get_builder()
         builder.relax = relax
+        builder.core = core
         builder.structure = structure
         builder.abs_atom_marker = abs_atom_marker
         builder.clean_workdir = orm.Bool(inputs['clean_workdir'])
         builder.return_all_powder_spectra = orm.Bool(inputs['return_all_powder_spectra'])
-        builder.core.scf = core_scf
-        builder.core.xs_prod.xspectra.code = xs_code
-        builder.core.xs_prod.xspectra.parameters = orm.Dict(core_xspectra['xspectra']['parameters'])
-        builder.core.xs_prod.xspectra.metadata = core_xspectra['xspectra'].get('metadata')
-        builder.core.xs_prod.kpoints_distance = orm.Float(core_xspectra['kpoints_distance'])
-        builder.core.get_powder_spectrum = orm.Bool(True)
-        builder.core.abs_atom_marker = abs_atom_marker
         core_hole_pseudos = {}
         gipaw_pseudos = {}
         if elements_list:
@@ -625,6 +614,8 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
     def run_all_xspectra_core(self): # pylint: disable=too-many-statements
         """Call all XspectraCoreWorkChains required to compute all requested spectra."""
 
+        from aiida_qe_xspec.workflows.functions.get_core_hole_inputs import get_core_hole_inputs
+
         structures_to_process = self.ctx.structures_to_process
         equivalent_sites_data = self.ctx.equivalent_sites_data
         abs_atom_marker = self.inputs.abs_atom_marker.value
@@ -634,8 +625,9 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
             inputs = AttributeDict(self.exposed_inputs(XspectraCoreWorkChain, namespace='core'))
             structure = structures_to_process[site]
             inputs.structure = structure
-            abs_element = equivalent_sites_data[site]['symbol']
-            abs_atom_kind = equivalent_sites_data[site]['kind_name']
+            abs_site_data = equivalent_sites_data[site]
+            abs_element = abs_site_data['symbol']
+            abs_atom_kind = abs_site_data['kind_name']
 
             if 'core_hole_treatments' in self.inputs:
                 ch_treatments = self.inputs.core_hole_treatments.get_dict()
@@ -654,8 +646,15 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
             # chosen core-hole approximation, then apply the correct pseudopotential pair.
             scf_inputs = inputs.scf.pw
             scf_params = scf_inputs.parameters.get_dict()
-            ch_inputs = XspectraCoreWorkChain.get_treatment_inputs(treatment=ch_treatment)
-            new_scf_params = recursive_merge(left=ch_inputs, right=scf_params)
+            if ch_treatment != 'none':
+                new_scf_params = get_core_hole_inputs(
+                        structure=structure,
+                        treatment=ch_treatment,
+                        parameters=scf_params,
+                        abs_site_data=abs_site_data,
+                    )
+            else:
+                new_scf_params = scf_params
 
             # Set the absorbing species index (`xiabs`) for the xspectra.x input.
             new_xs_params = inputs.xs_prod.xspectra.parameters.get_dict()
@@ -669,28 +668,31 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
             # given the input parameters. (e.g. it conforms to an existing magnetic
             # structure already defined for the system)
 
-            # TODO: we need to re-visit the core-hole treatment settings,
-            # in order to avoid the need for fudges like these and set these at
-            # submission rather than inside the WorkChain itself.
-            if 'starting_magnetization' in new_scf_params['SYSTEM']:
-                inherited_mag =  new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_kind]
-                if ch_treatment not in ['xch_smear', 'xch_fixed']:
-                    new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] = inherited_mag
-                else: # if there is meant to be an unpaired electron, give it to the absorbing atom.
-                    if inherited_mag == 0: # set it to 1, if it would be neutral in the ground-state.
-                        new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] =  1
-                    else: # assume that it takes the same magnetic configuration as the kind that it replaces.
-                        new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] =  inherited_mag
-            elif ch_treatment in ['xch_smear', 'xch_fixed']:
-                new_scf_params['SYSTEM']['starting_magnetization'] = {abs_atom_marker : 1}
+            # # TODO: we need to re-visit the core-hole treatment settings,
+            # # in order to avoid the need for fudges like these and set these at
+            # # submission rather than inside the WorkChain itself.
+            # if 'starting_magnetization' in new_scf_params['SYSTEM']:
+            #     inherited_mag =  new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_kind]
+            #     if ch_treatment not in ['xch_smear', 'xch_fixed']:
+            #         new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] = inherited_mag
+            #     else: # if there is meant to be an unpaired electron, give it to the absorbing atom.
+            #         if inherited_mag == 0: # set it to 1, if it would be neutral in the ground-state.
+            #             new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] =  1
+            #         else: # assume that it takes the same magnetic configuration as the kind that it replaces.
+            #             new_scf_params['SYSTEM']['starting_magnetization'][abs_atom_marker] =  inherited_mag
+            # elif ch_treatment in ['xch_smear', 'xch_fixed']:
+            #     new_scf_params['SYSTEM']['starting_magnetization'] = {abs_atom_marker : 1}
 
-            # remove any duplicates created from the "core_hole_treatments.yaml" defaults
-            new_scf_params_keys = list(new_scf_params['SYSTEM'].keys())
-            for key in new_scf_params_keys:
-                if 'starting_magnetization(' in key:
-                    new_scf_params['SYSTEM'].pop(key, None)
+            # # remove any duplicates created from the "core_hole_treatments.yaml" defaults
+            # new_scf_params_keys = list(new_scf_params['SYSTEM'].keys())
+            # for key in new_scf_params_keys:
+            #     if 'starting_magnetization(' in key:
+            #         new_scf_params['SYSTEM'].pop(key, None)
 
-            core_hole_pseudo = self.inputs.core_hole_pseudos[abs_element]
+            if ch_treatment == 'none':
+                core_hole_pseudo = self.inputs.gipaw_pseudos[abs_element]
+            else:
+                core_hole_pseudo = self.inputs.core_hole_pseudos[abs_element]
             gipaw_pseudo = self.inputs.gipaw_pseudos[abs_element]
             inputs.scf.pw.pseudos[abs_atom_marker] = core_hole_pseudo
             # Check how many instances of the absorbing element are present and assign
