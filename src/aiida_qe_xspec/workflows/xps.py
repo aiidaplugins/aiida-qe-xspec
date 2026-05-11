@@ -2,10 +2,6 @@
 
 Uses QuantumESPRESSO pw.x.
 """
-import pathlib
-from typing import Optional, Union
-
-import yaml
 from aiida import orm
 from aiida.common import AttributeDict, ValidationError
 from aiida.engine import ToContext, WorkChain, if_
@@ -14,7 +10,7 @@ from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 from aiida_pseudo.data.pseudo import UpfData
 from aiida_qe_xspec.calculations.functions.xspectra.get_xps_spectra import get_spectra_by_element
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
-from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recursive_merge
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
@@ -384,79 +380,6 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         return files(protocols) / 'xps.yaml'
 
     @classmethod
-    def get_default_treatment(cls) -> str:
-        """Return the default core-hole treatment.
-
-        :param cls: the workflow class.
-        :return: the default core-hole treatment
-        """
-        return cls._load_treatment_file()['default_treatment']
-
-    @classmethod
-    def get_available_treatments(cls) -> dict:
-        """Return the available core-hole treatments.
-
-        :param cls: the workflow class.
-        :return: dictionary of available treatments, where each key is a treatment and value
-                 is another dictionary that contains at least the key `description` and
-                 optionally other keys with supplimentary information.
-        """
-        data = cls._load_treatment_file()
-        return {treatment: {'description': values['description']} for treatment, values in data['treatments'].items()}
-
-    @classmethod
-    def get_treatment_inputs(
-        cls,
-        treatment: Optional[dict] = None,
-        overrides: Union[dict, pathlib.Path, None] = None,
-    ) -> dict:
-        """Return the inputs for the given workflow class and core-hole treatment.
-
-        :param cls: the workflow class.
-        :param treatment: optional specific treatment, if not specified, the default will be used
-        :param overrides: dictionary of inputs that should override those specified by the treatment. The mapping should
-            maintain the exact same nesting structure as the input port namespace of the corresponding workflow class.
-        :return: mapping of inputs to be used for the workflow class.
-        """
-        data = cls._load_treatment_file()
-        treatment = treatment or data['default_treatment']
-
-        try:
-            treatment_inputs = data['treatments'][treatment]
-        except KeyError as exception:
-            raise ValueError(
-                f'`{treatment}` is not a valid treatment. '
-                'Call ``get_available_treatments`` to show available treatments.'
-            ) from exception
-        inputs = recursive_merge(data['default_inputs'], treatment_inputs)
-        inputs.pop('description')
-
-        if isinstance(overrides, pathlib.Path):
-            with overrides.open() as file:
-                overrides = yaml.safe_load(file)
-
-        if overrides:
-            return recursive_merge(inputs, overrides)
-
-        return inputs
-
-    @classmethod
-    def _load_treatment_file(cls) -> dict:
-        """Return the contents of the core-hole treatment file."""
-        with cls.get_treatment_filepath().open() as file:
-            return yaml.safe_load(file)
-
-    @classmethod
-    def get_treatment_filepath(cls):
-        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the core-hole treatments for the SCF step."""
-        from importlib_resources import files
-
-        from . import protocols
-
-        # import protocols
-        return files(protocols) / 'core_hole_treatments.yaml'
-
-    @classmethod
     def get_builder_from_protocol(  # noqa
         cls,
         code,
@@ -496,7 +419,6 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         """
         inputs = cls.get_protocol_inputs(protocol, overrides)
         pw_args = (code, structure, protocol)
-        # xspectra_args = (pw_code, xs_code, structure, protocol, upf2plotcore_code)
 
         relax = PwRelaxWorkChain.get_builder_from_protocol(
             *pw_args, overrides=inputs.get('relax', None), options=options, **kwargs
@@ -545,8 +467,11 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
                 kpoints_mesh = DataFactory('core.array.kpoints')()
                 kpoints_mesh.set_kpoints_mesh([1, 1, 1])
                 builder.ch_scf.kpoints = kpoints_mesh
-                builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
-                builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                builder.relax.base.pw.settings = orm.Dict(dict={'gamma_only': True})
+                # These are the correct input ports for v5 of AiiDA-QE, but since AiiDALab-QE requires
+                # v4.12.1 this makes the GUI part of the plugin incompatable with v5 of AiiDA-QE.
+                # builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                # builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
         # pylint: enable=no-member
         return builder
 
@@ -682,6 +607,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
 
     def run_all_scf(self):
         """Call all PwBaseWorkChain's required to compute total energies for each absorbing atom site."""
+
+        from aiida_qe_xspec.workflows.functions.get_core_hole_inputs import get_core_hole_inputs
         # scf for supercell
         futures = {}
         if self.inputs.calc_binding_energy:
@@ -695,7 +622,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         ch_treatments = self.inputs.core_hole_treatments.get_dict() if 'core_hole_treatments' in self.inputs else {}
         labels = {}
         for site in structures_to_process:
-            abs_element = equivalent_sites_data[site]['symbol']
+            abs_site_data = equivalent_sites_data[site]
+            abs_element = abs_site_data['symbol']
             labels.setdefault(abs_element, {})
             for orbital in self.ctx.core_levels[abs_element]:
                 labels[abs_element].setdefault(orbital, {})
@@ -704,18 +632,18 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
                 inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='ch_scf'))
                 structure = structures_to_process[site]
                 inputs.pw.structure = structure
-                ch_treatment = ch_treatments.get(abs_element, 'xch_smear')
+                ch_treatment = ch_treatments.get(abs_element, 'XCH')
                 inputs.metadata.call_link_label = f'{key}'
                 # Get the given settings for the SCF inputs and then overwrite them with the
                 # chosen core-hole approximation, then apply the correct pseudopotential pair
                 scf_params = inputs.pw.parameters.get_dict()
-                ch_treatment_inputs = self.get_treatment_inputs(treatment=ch_treatment)
-                new_scf_params = recursive_merge(left=scf_params, right=ch_treatment_inputs)
-                if ch_treatment == 'xch_smear':
-                    structure_kinds = [kind.name for kind in structure.kinds]
-                    structure_kinds.sort()
-                    abs_species = structure_kinds.index(abs_atom_marker)
-                    new_scf_params['SYSTEM'][f'starting_magnetization({abs_species + 1})'] = 1
+                new_scf_params = get_core_hole_inputs(
+                        structure=structure,
+                        treatment=ch_treatment,
+                        parameters=scf_params,
+                        abs_site_data=abs_site_data,
+                    )
+
                 # remove pseudo if the only element is replaced by the marker
                 inputs.pw.pseudos = {key: value for key, value in self.ctx.pseudos.items() if key in structure.get_kind_names()}
                 inputs.pw.pseudos[abs_atom_marker] = self.inputs.core_hole_pseudos[abs_element][orbital]

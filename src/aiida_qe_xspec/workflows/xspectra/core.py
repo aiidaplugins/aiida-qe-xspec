@@ -6,7 +6,7 @@ import pathlib
 from typing import Optional, Union
 
 from aiida import orm
-from aiida.common import AttributeDict
+from aiida.common import AttributeDict, ValidationError
 from aiida.engine import ToContext, WorkChain, append_, if_
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
@@ -16,6 +16,7 @@ from aiida_qe_xspec.calculations.functions.xspectra.get_powder_spectrum import g
 from aiida_qe_xspec.calculations.functions.xspectra.merge_spectra import merge_spectra
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin, recursive_merge
+from aiida_quantumespresso.common.types import SpinType, ElectronicType
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
@@ -217,72 +218,6 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         return files(protocols) / 'core.yaml'
 
     @classmethod
-    def get_treatment_filepath(cls) -> pathlib.Path:
-        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the core-hole treatments for the SCF step."""
-        from importlib_resources import files
-
-        from .. import protocols
-        return files(protocols) / 'core_hole_treatments.yaml'
-
-    @classmethod
-    def get_default_treatment(cls) -> str:
-        """Return the default core-hole treatment.
-
-        :param cls: the workflow class.
-        :return: the default core-hole treatment
-        """
-
-        return cls._load_treatment_file()['default_treatment']
-
-    @classmethod
-    def get_available_treatments(cls) -> dict:
-        """Return the available core-hole treatments.
-
-        :param cls: the workflow class.
-        :return: dictionary of available treatments, where each key is a treatment and value
-                 is another dictionary that contains at least the key `description` and
-                 optionally other keys with supplimentary information.
-        """
-        data = cls._load_treatment_file()
-        return {treatment: {'description': values['description']} for treatment, values in data['treatments'].items()}
-
-    @classmethod
-    def get_treatment_inputs(
-        cls,
-        treatment: Optional[dict] = None,
-        overrides: Union[dict, pathlib.Path, None] = None,
-    ) -> dict:
-        """Return the inputs for the given workflow class and core-hole treatment.
-
-        :param cls: the workflow class.
-        :param treatment: optional specific treatment, if not specified, the default will be used
-        :param overrides: dictionary of inputs that should override those specified by the treatment. The mapping should
-            maintain the exact same nesting structure as the input port namespace of the corresponding workflow class.
-        :return: mapping of inputs to be used for the workflow class.
-        """
-        data = cls._load_treatment_file()
-        treatment = treatment or data['default_treatment']
-
-        try:
-            treatment_inputs = data['treatments'][treatment]
-        except KeyError as exception:
-            raise ValueError(
-                f'`{treatment}` is not a valid treatment. '
-                'Call ``get_available_treatments`` to show available treatments.'
-            ) from exception
-        inputs = recursive_merge(data['default_inputs'], treatment_inputs)
-        inputs.pop('description')
-
-        if isinstance(overrides, pathlib.Path):
-            with overrides.open() as file:
-                overrides = yaml.safe_load(file)
-
-        if overrides:
-            return recursive_merge(inputs, overrides)
-
-        return inputs
-
-    @classmethod
     def _load_treatment_file(cls) -> dict:
         """Return the contents of the core-hole treatment file."""
         with cls.get_treatment_filepath().open() as file:
@@ -294,6 +229,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         pw_code,
         xs_code,
         structure,
+        abs_site_data=None,
         upf2plotcore_code=None,
         core_wfc_data=None,
         core_hole_pseudos=None,
@@ -310,6 +246,10 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         :param xs_code: the ``Code`` instance configured for the
                         ``xspec.xspectra`` plugin.
         :param structure: the ``StructureData`` instance to use.
+        :param abs_site_data: a ``dict`` object containing data on the Kind and site index
+                              for the desired core-hole location. structured as a single site 
+                              entry of the 'equivalent_sites_data' entry of the `equivalent_sites_data`
+                              Dict node produced by `get_xspectra_structures()`.
         :param upf2plotcore_code: the aiida-shell ``Code`` instance configured for the
                                   upf2plotcore.sh shell script, used to generate the core
                                   wavefunction data.
@@ -334,23 +274,89 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         :return: a process builder instance with all inputs defined ready for launch.
         """
 
+        from aiida_qe_xspec.workflows.functions.get_core_hole_inputs import get_core_hole_inputs
+
+        if isinstance(abs_site_data, orm.Dict):
+            # In case the entire `output_parameters` from `get_xspectra_structures`, extract it:
+            incoming_dict = abs_site_data.get_dict()
+            if 'abs_site_data' in incoming_dict:
+                abs_site_data = incoming_dict['abs_site_data']
+            else:
+                abs_site_data = incoming_dict
+
+        if isinstance(abs_site_data, dict): # Quick validity check of input data:
+            site_index_found = False
+            site_kindname_found = False
+            for key in abs_site_data:
+                if 'site_index' in key:
+                    site_index_found = True
+                if 'kind_name' in key:
+                    site_kindname_found = True
+            if not site_index_found:
+                raise ValidationError(
+                    'No site index was found in abs_site_data input. '
+                    f'Keys found: {abs_site_data.keys()}'
+                )
+            if not site_kindname_found:
+                raise ValidationError(
+                    'No site kind_name was found in abs_site_data input. '
+                    f'Keys found: {abs_site_data.keys()}'
+                )
+            
+
         inputs = cls.get_protocol_inputs(protocol, overrides)
         pw_inputs = PwBaseWorkChain.get_protocol_inputs(protocol=protocol, overrides=inputs.get('scf', {}))
-        pw_params = pw_inputs['pw']['parameters']
+        in_params = pw_inputs['pw']['parameters']
         kinds_present = sorted([kind.name for kind in structure.kinds])
-        # Get the default inputs from the PwBaseWorkChain and override them with those
-        # required for the chosen core-hole treatment
-        pw_params = recursive_merge(
-            left=pw_params,
-            right=cls.get_treatment_inputs(
-                treatment=core_hole_treatment, overrides=inputs.get('scf', {}).get('pw', {}).get('parameters', None)
-            )
-        )
 
-        pw_inputs['pw']['parameters'] = pw_params
+        # To make this `get_builder_` method to work with higher-level WorkChains (e.g. the CrystalWorkChain) where
+        # multiple CoreWorkChains are to be submitted, we simply don't apply the core-hole treatment when the 
+        # function is called. This will also help with the case where an "NCH" (No Core Hole) treatment is desired.
+        if core_hole_treatment not in ['none', None]:
+            pw_params = get_core_hole_inputs(
+                structure=structure,
+                treatment=core_hole_treatment,
+                parameters=in_params,
+                abs_site_data=abs_site_data,
+                )
+            pw_inputs['pw']['parameters'] = pw_params
+
         pw_args = (pw_code, structure, protocol)
 
-        scf = PwBaseWorkChain.get_builder_from_protocol(*pw_args, overrides=pw_inputs, options=options, **kwargs)
+        if 'electronic_type' not in kwargs:
+            if pw_inputs['pw']['parameters']['SYSTEM'].get('occupations') == 'fixed':
+                elec = ElectronicType.INSULATOR
+            else:
+                elec = ElectronicType.METAL
+        else:
+            elec = kwargs.pop('electronic_type')
+
+        if core_hole_treatment in ['XCH']:
+            spin = SpinType.COLLINEAR
+            if 'spin_type' in kwargs: # remove any duplicate values created by e.g. AiiDALab
+                kwargs.pop('spin_type')
+        else:
+            if 'spin_type' not in kwargs:
+                spin = SpinType.NONE
+            else:
+                spin = kwargs.pop('spin_type')
+
+
+        scf = PwBaseWorkChain.get_builder_from_protocol(
+            *pw_args, overrides=pw_inputs, spin_type=spin, electronic_type=elec, options=options, **kwargs
+        )
+
+        # If we want to deal with systems that have fixed occupations and user-defined magnetic moments,
+        # then we need to override the default behaviour of the QE plugin which removes `starting_magnetization`
+        # if `tot_magnetization` is set by the user. This will be a temporary fix: the "proper" way to do this
+        # would be to run a calculation with occupations = 'smearing' and then a second calculation with
+        # occupations = 'fixed', which ensures that the magnetization(particularly in the case where a core-hole
+        # is added to the system) is computed correctly before calculating the XANES spectrum. As this would require
+        # re-writing and testing the main WorkChain, we use this work-around for now.
+        if (pw_inputs['pw']['parameters']['SYSTEM'].get('nspin') == 2 and elec == ElectronicType.INSULATOR):
+            scf['pw']['parameters']['SYSTEM'][
+                'starting_magnetization'
+            ] = pw_inputs['pw']['parameters']['SYSTEM']['starting_magnetization']
 
         scf.pop('clean_workdir', None)
         scf['pw'].pop('structure', None)
@@ -366,7 +372,11 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
             xs_prod_metadata['options'] = recursive_merge(xs_prod_metadata['options'], options)
 
         abs_atom_marker = inputs['abs_atom_marker']
-        xs_prod_parameters['INPUT_XSPECTRA']['xiabs'] = kinds_present.index(abs_atom_marker) + 1
+        if abs_atom_marker in kinds_present:
+            xs_prod_parameters['INPUT_XSPECTRA']['xiabs'] = kinds_present.index(abs_atom_marker) + 1
+        else:
+            xs_prod_parameters['INPUT_XSPECTRA']['xiabs'] = 1
+            
         if core_hole_pseudos:
             abs_element_kinds = []
             for kind in structure.kinds:

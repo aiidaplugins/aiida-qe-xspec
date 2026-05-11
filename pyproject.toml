@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
   'aiida-core>=2.6',
-  'aiida-quantumespresso>=4.10',
+  'aiida-quantumespresso==4.12.1',
   'gitpython'
 ]
 dynamic = ['description', 'version']

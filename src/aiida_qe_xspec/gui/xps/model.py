@@ -18,12 +18,11 @@ class XpsConfigurationSettingsModel(PanelModel, HasInputStructure):
     core_hole_treatment_options = tl.List(
         trait=tl.List(tl.Unicode()),
         default_value=[
-            ['XCH(smear)', 'xch_smear'],
-            ['XCH(fixed)', 'xch_fixed'],
+            ['Excited', 'excited'],
             ['Full', 'full'],
         ],
     )
-    core_hole_treatment = tl.Unicode('xch_smear')
+    core_hole_treatment = tl.Unicode('excited')
     pseudo_group_options = tl.List(
         trait=tl.Unicode(),
         default_value=[

@@ -35,9 +35,8 @@ class XasConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
     core_hole_treatments_options = tl.List(
         trait=tl.List(tl.Unicode()),
         default_value=[
-            ['FCH', 'full'],
-            ['XCH (Smearing)', 'xch_smear'],
-            ['XCH (Fixed)', 'xch_fixed'],
+            ['full', 'Full'],
+            ['excited', 'Excited'],
         ],
     )
     core_hole_treatments = tl.Dict(
@@ -102,7 +101,7 @@ class XasConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
         return list(self.kind_names)
 
     def get_recommendation(self, element):
-        return 'xch_smear' if element in self.xch_elements else 'full'
+        return 'Excited' if element in self.xch_elements else 'Full'
 
     def reset(self):
         with self.hold_trait_notifications():

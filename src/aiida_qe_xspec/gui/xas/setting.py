@@ -76,25 +76,19 @@ class XasConfigurationSettingsPanel(
                             Select the core-hole treatment scheme from the dropdown box
                         </li>
                     </ol>
-                    There are three supported options for core-hole treatment:
+                    There are two supported options for core-hole treatment:
                     <ul>
                         <li>
-                            FCH: Remove one electron from the system (any occupations
-                            scheme)
+                            FCH: Remove one electron from the system
                         </li>
                         <li>
-                            XCH (Smearing): places the excited electron into the
-                            conduction band (smeared occupations)
-                        </li>
-                        <li>
-                            XCH (Fixed): places the excited electron into the conduction
-                            band (fixed occupations).
+                            XCH: places the excited electron into the conduction band
                         </li>
                     </ul>
                     <p style="margin-bottom: 10px;">
-                        For XAS calculations of most elements, the FCH treatment is
-                        recommended, however in some cases the XCH treatment should be
-                        used instead.
+                        For XAS calculations of most light elements, the FCH treatment is
+                        recommended, however in some cases (e.g. transition metals) the
+                        XCH treatment should be used instead.
                     </p>
                     <p>
                         The recommended setting will be shown for each available element.
@@ -119,7 +113,7 @@ class XasConfigurationSettingsPanel(
                     Define the minimum cell length in angstrom for the resulting
                     supercell, and thus all output structures. The default value of 8.0
                     angstrom will be used if no input is given. Setting this value to
-                    0.0 will instruct the CF to not scale up the input structure.
+                    0.0 will not modify the input structure.
                 </div>
             """),
             ipw.HBox(
