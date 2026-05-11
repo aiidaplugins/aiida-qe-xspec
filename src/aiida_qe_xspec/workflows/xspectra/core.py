@@ -247,7 +247,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
                         ``xspec.xspectra`` plugin.
         :param structure: the ``StructureData`` instance to use.
         :param abs_site_data: a ``dict`` object containing data on the Kind and site index
-                              for the desired core-hole location. structured as a single site 
+                              for the desired core-hole location. structured as a single site
                               entry of the 'equivalent_sites_data' entry of the `equivalent_sites_data`
                               Dict node produced by `get_xspectra_structures()`.
         :param upf2plotcore_code: the aiida-shell ``Code`` instance configured for the
@@ -302,7 +302,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
                     'No site kind_name was found in abs_site_data input. '
                     f'Keys found: {abs_site_data.keys()}'
                 )
-            
+
 
         inputs = cls.get_protocol_inputs(protocol, overrides)
         pw_inputs = PwBaseWorkChain.get_protocol_inputs(protocol=protocol, overrides=inputs.get('scf', {}))
@@ -310,7 +310,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         kinds_present = sorted([kind.name for kind in structure.kinds])
 
         # To make this `get_builder_` method to work with higher-level WorkChains (e.g. the CrystalWorkChain) where
-        # multiple CoreWorkChains are to be submitted, we simply don't apply the core-hole treatment when the 
+        # multiple CoreWorkChains are to be submitted, we simply don't apply the core-hole treatment when the
         # function is called. This will also help with the case where an "NCH" (No Core Hole) treatment is desired.
         if core_hole_treatment not in ['none', None]:
             pw_params = get_core_hole_inputs(
@@ -376,7 +376,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
             xs_prod_parameters['INPUT_XSPECTRA']['xiabs'] = kinds_present.index(abs_atom_marker) + 1
         else:
             xs_prod_parameters['INPUT_XSPECTRA']['xiabs'] = 1
-            
+
         if core_hole_pseudos:
             abs_element_kinds = []
             for kind in structure.kinds:

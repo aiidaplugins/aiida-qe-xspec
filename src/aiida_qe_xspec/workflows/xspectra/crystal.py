@@ -271,7 +271,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
 
         from ..protocols import xspectra as protocols
         return files(protocols) / 'crystal.yaml'
-    
+
 
     @classmethod
     def get_builder_from_protocol( # pylint: disable=too-many-statements
@@ -293,7 +293,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
                         use the mapping of {"element" : {"core_hole" : <upf>,"gipaw" : <upf>}}
         :param protocol: the protocol to use. If not specified, the default will be used.
         :param overrides: optional dictionary of inputs to override the defaults of the
-                          XspectraWorkChain itself. Note that, as 
+                          XspectraWorkChain itself. Note that, as
         :param kwargs: additional keyword arguments that will be passed to the
             ``get_builder_from_protocol`` of all the sub processes that are called by this
             workchain.

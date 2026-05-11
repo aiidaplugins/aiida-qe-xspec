@@ -37,7 +37,7 @@ def get_builder(codes, structure, parameters, **kwargs):
     for element, levels in correction_energies.items():
         for level, energy in levels.items():
             correction_energies[element][level] = energy - band_gap_correction
-    
+
     is_molecule_input = True if xps_parameters.get('structure_type') == 'molecule' else False
     if is_molecule_input:
         core_hole_treatment = 'full'
