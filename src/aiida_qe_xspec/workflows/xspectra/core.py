@@ -323,15 +323,24 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
 
         pw_args = (pw_code, structure, protocol)
 
-        if pw_inputs['pw']['parameters']['SYSTEM'].get('occupations') == 'fixed':
-            elec = ElectronicType.INSULATOR
+        if 'electronic_type' not in kwargs:
+            if pw_inputs['pw']['parameters']['SYSTEM'].get('occupations') == 'fixed':
+                elec = ElectronicType.INSULATOR
+            else:
+                elec = ElectronicType.METAL
         else:
-            elec = ElectronicType.METAL
+            elec = kwargs.pop('electronic_type')
 
-        if core_hole_treatment in ['XCH', 'full']:
+        if core_hole_treatment in ['XCH']:
             spin = SpinType.COLLINEAR
+            if 'spin_type' in kwargs: # remove any duplicate values created by e.g. AiiDALab
+                kwargs.pop('spin_type')
         else:
-            spin = SpinType.NONE
+            if 'spin_type' not in kwargs:
+                spin = SpinType.NONE
+            else:
+                spin = kwargs.pop('spin_type')
+
 
         scf = PwBaseWorkChain.get_builder_from_protocol(
             *pw_args, overrides=pw_inputs, spin_type=spin, electronic_type=elec, options=options, **kwargs
