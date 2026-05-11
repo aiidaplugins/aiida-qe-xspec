@@ -35,8 +35,8 @@ class XasConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructur
     core_hole_treatments_options = tl.List(
         trait=tl.List(tl.Unicode()),
         default_value=[
-            ['Full', 'full'],
-            ['Excited', 'excited'],
+            ['full', 'Full'],
+            ['excited', 'Excited'],
         ],
     )
     core_hole_treatments = tl.Dict(
