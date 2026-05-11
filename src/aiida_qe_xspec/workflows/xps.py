@@ -467,8 +467,11 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
                 kpoints_mesh = DataFactory('core.array.kpoints')()
                 kpoints_mesh.set_kpoints_mesh([1, 1, 1])
                 builder.ch_scf.kpoints = kpoints_mesh
-                builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
-                builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                builder.relax.base.pw.settings = orm.Dict(dict={'gamma_only': True})
+                # These are the correct input ports for v5 of AiiDA-QE, but since AiiDALab-QE requires
+                # v4.12.1 this makes the GUI part of the plugin incompatable with v5 of AiiDA-QE.
+                # builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                # builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
         # pylint: enable=no-member
         return builder
 

@@ -37,16 +37,12 @@ def get_builder(codes, structure, parameters, **kwargs):
     for element, levels in correction_energies.items():
         for level, energy in levels.items():
             correction_energies[element][level] = energy - band_gap_correction
-    #
+    
     is_molecule_input = True if xps_parameters.get('structure_type') == 'molecule' else False
-    # set core hole treatment based on electronic type
-    if parameters['workchain']['electronic_type'] == 'metal':
-        core_hole_treatment = 'xch_smear'
-    else:
-        core_hole_treatment = 'xch_fixed'
-    # if molecule input, set core hole treatment to full
     if is_molecule_input:
         core_hole_treatment = 'full'
+    else:
+        core_hole_treatment = 'excited'
     core_hole_treatments = {element: core_hole_treatment for element in core_levels}
     structure_preparation_settings = {
         'supercell_min_parameter': Float(supercell_min_parameter_map[protocol]),

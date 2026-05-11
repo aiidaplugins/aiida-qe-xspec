@@ -52,7 +52,7 @@ def get_core_hole_inputs(structure, treatment, parameters, abs_site_data, **kwar
 
     abs_atom_marker = kwargs.get('abs_atom_marker', 'X')
     site_index = abs_site_data['site_index']
-    abs_atom_kind = abs_site_data['kind_name']
+    abs_atom_kind = abs_site_data.get('kind_name', abs_site_data['symbol'])
     updated_parameters = parameters.copy()
     starting_mag = parameters['SYSTEM'].get('starting_magnetization', None)
     if not starting_mag and parameters['SYSTEM'].get('nspin', None) == 2:
