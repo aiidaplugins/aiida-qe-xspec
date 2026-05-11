@@ -312,7 +312,7 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         # To make this `get_builder_` method to work with higher-level WorkChains (e.g. the CrystalWorkChain) where
         # multiple CoreWorkChains are to be submitted, we simply don't apply the core-hole treatment when the 
         # function is called. This will also help with the case where an "NCH" (No Core Hole) treatment is desired.
-        if core_hole_treatment is not None:
+        if core_hole_treatment not in ['none', None]:
             pw_params = get_core_hole_inputs(
                 structure=structure,
                 treatment=core_hole_treatment,

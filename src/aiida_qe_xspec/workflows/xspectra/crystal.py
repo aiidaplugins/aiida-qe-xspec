@@ -654,7 +654,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
             # chosen core-hole approximation, then apply the correct pseudopotential pair.
             scf_inputs = inputs.scf.pw
             scf_params = scf_inputs.parameters.get_dict()
-            if ch_treatment != 'none':
+            if ch_treatment not in ['none', None]:
                 new_scf_params = get_core_hole_inputs(
                         structure=structure,
                         treatment=ch_treatment,
