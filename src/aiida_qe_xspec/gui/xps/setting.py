@@ -17,6 +17,10 @@ class XpsConfigurationSettingsPanel(
             'structure_uuid',
         )
         self._model.observe(
+            self._on_functional_change,
+            'functional',
+        )
+        self._model.observe(
             self._on_pseudo_group_change,
             'pseudo_group',
         )
@@ -204,6 +208,9 @@ class XpsConfigurationSettingsPanel(
 
     def _on_input_structure_change(self, _):
         self.refresh(specific='structure')
+
+    def _on_functional_change(self, _):
+        self.refresh(specific='functional')
 
     def _on_pseudo_group_change(self, _):
         self.refresh(specific='pseudos')
