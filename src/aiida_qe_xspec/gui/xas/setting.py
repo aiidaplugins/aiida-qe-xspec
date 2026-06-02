@@ -19,6 +19,14 @@ class XasConfigurationSettingsPanel(
             self._on_input_structure_change,
             'structure_uuid',
         )
+        self._model.observe(
+            self._on_functional_change,
+            'functional',
+        )
+        self._model.observe(
+            self._on_pseudo_group_change,
+            'pseudo_group',
+        )
 
     def render(self):
         if self.rendered:
@@ -129,6 +137,12 @@ class XasConfigurationSettingsPanel(
 
     def _on_input_structure_change(self, _):
         self.refresh(specific='structure')
+
+    def _on_functional_change(self, _):
+        self.refresh(specific='functional')
+
+    def _on_pseudo_group_change(self, _):
+        self.refresh(specific='pseudos')
 
     def _update_ui(self):
         self._show_loading()
