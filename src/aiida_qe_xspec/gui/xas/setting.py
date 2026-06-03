@@ -10,7 +10,6 @@ from .model import XasConfigurationSettingsModel
 class XasConfigurationSettingsPanel(
     ConfigurationSettingsPanel[XasConfigurationSettingsModel],
 ):
-
     def __init__(self, model: XasConfigurationSettingsModel, **kwargs):
         super().__init__(model, **kwargs)
 
@@ -141,7 +140,7 @@ class XasConfigurationSettingsPanel(
         self.refresh(specific='functional')
 
     def _on_pseudo_group_change(self, _):
-        self.refresh(specific='pseudos')
+        self.refresh(specific='pseudo_group')
 
     def _update_ui(self):
         self._show_loading()

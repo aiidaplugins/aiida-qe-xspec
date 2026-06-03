@@ -55,7 +55,7 @@ class XpsConfigurationSettingsPanel(
         self.selection_mode = ipw.ToggleButtons(
             options=['Core-level', 'Atom indices'],
             description='Select by:',
-            style={'description_width': 'initial'}
+            style={'description_width': 'initial'},
         )
         self.selection_mode.observe(self._on_selection_mode_change, names='value')
 
@@ -73,24 +73,28 @@ class XpsConfigurationSettingsPanel(
                 lambda value: [int(i.strip()) for i in value.split(',') if i.strip()],
             ],
         )
-        self.core_levels_container = ipw.VBox([
-            ipw.HTML(
-                """
+        self.core_levels_container = ipw.VBox(
+            children=[
+                ipw.HTML(
+                    """
                 <div style="line-height: 140%;">
                     The list of core-levels to be considered for analysis.
                 </div>
             """
-            ),
-            self.core_levels_widget,
-        ])
-        self.atom_indices_container = ipw.VBox([
-            ipw.HTML("""
+                ),
+                self.core_levels_widget,
+            ]
+        )
+        self.atom_indices_container = ipw.VBox(
+            children=[
+                ipw.HTML("""
                      <div style="margin-top: 10px;">
                      Input the indices of atoms to be considered for analysis.
                 </div>
                 """),
-            self.atom_indices_input,
-        ])
+                self.atom_indices_input,
+            ]
+        )
 
         self.structure_type = ipw.ToggleButtons()
         ipw.dlink(
@@ -129,7 +133,6 @@ class XpsConfigurationSettingsPanel(
             (self._model, 'band_gap_correction'),
             (self.band_gap_correction, 'value'),
         )
-
 
         self.children = [
             InAppGuide(identifier='xps-settings'),
@@ -213,7 +216,7 @@ class XpsConfigurationSettingsPanel(
         self.refresh(specific='functional')
 
     def _on_pseudo_group_change(self, _):
-        self.refresh(specific='pseudos')
+        self.refresh(specific='pseudo_group')
 
     def _on_selection_mode_change(self, change):
         mode = change.get('new', self.selection_mode.value)
