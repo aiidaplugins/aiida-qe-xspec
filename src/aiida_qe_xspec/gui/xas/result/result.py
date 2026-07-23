@@ -173,6 +173,7 @@ class XasResultsPanel(ResultsPanel[XasResultsModel]):
             self.download_data,
             self.plot,
         ]
+        self.rendered = True
 
     def _post_render(self):
         self._model.update_spectrum_options()
