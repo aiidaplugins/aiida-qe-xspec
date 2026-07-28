@@ -1,9 +1,10 @@
 """Classes and methods for running xspectra.x with AiiDA."""
 
-import os
+import os, numbers, copy, warnings
 
+from types import MappingProxyType
 from aiida import orm
-from aiida.common import exceptions
+from aiida.common import datastructures, exceptions
 from aiida.orm import Dict, SinglefileData, XyData
 from aiida.plugins import DataFactory
 
@@ -19,6 +20,17 @@ class XspectraCalculation(NamelistsCalculation):
     _Spectrum_FILENAME = 'xanes.dat'
     _XSPECTRA_SAVE_FILE = 'xanes.sav'
     _XSPECTRA_GAMMA_FILE = 'gamma.dat'
+    _ENABLED_PARALLELIZATION_FLAGS = ['npools', 'pd']
+    _PARALLELIZATION_FLAG_ALIASES = MappingProxyType(
+        dict(  # noqa: C408
+            nimage=('ni', 'nimages', 'npot'),
+            npool=('nk', 'npools'),
+            nband=('nb', 'nbgrp', 'nband_group'),
+            ntg=('nt', 'ntask_groups', 'nyfft'),
+            ndiag=('northo', 'nd', 'nproc_diag', 'nproc_ortho'),
+            nhw=('nh', 'n_howmany', 'howmany'),
+        )
+    )
     _default_namelists = ['INPUT_XSPECTRA', 'PLOT', 'PSEUDOS', 'CUT_OCC']
     _blocked_keywords = [('INPUT_XSPECTRA', 'outdir', NamelistsCalculation._OUTPUT_SUBFOLDER),
                          ('INPUT_XSPECTRA', 'prefix', NamelistsCalculation._PREFIX),
@@ -55,6 +67,15 @@ class XspectraCalculation(NamelistsCalculation):
             help='An optional file containing the data for the broadening function used when'
             ' `gamma_mode=file`'
         )
+        spec.input(
+            'parallelization',
+            valid_type=orm.Dict,
+            required=False,
+            help=(
+                'Parallelization options. Accepted options: [npools])'
+            ),
+            validator=cls.validate_parallelization,
+        )
 
         spec.output('output_parameters', valid_type=Dict)
         spec.output('spectra', valid_type=XyData)
@@ -87,6 +108,17 @@ class XspectraCalculation(NamelistsCalculation):
             'ERROR_READING_SPECTRUM_FILE_DATA',
             message='The spectrum data file could not be read using NumPy genfromtxt'
         )
+
+    @classmethod
+    def validate_parallelization(cls, value, _):
+        """Validate the ``parallelization`` input."""
+        if value:
+            invalid_options = [k for k in value.get_dict() if k not in cls._ENABLED_PARALLELIZATION_FLAGS]
+            if len(invalid_options) > 0:
+                return (f'Unknown parallelization options: {invalid_options}')
+            invalid_values = [v for v in value.get_dict().values() if not isinstance(v, numbers.Integral)]
+            if len(invalid_values) > 0:
+                return (f'Parallelization flag options must be integers.\nFound invalid options: {invalid_values}')
 
     def generate_input_file(self, parameters):  # pylint: disable=arguments-differ
         """Add kpoint handling to the inherited method.
@@ -136,4 +168,21 @@ class XspectraCalculation(NamelistsCalculation):
                 parent_folder.computer.uuid, os.path.join(parent_folder.get_remote_path(),
                                                           self._XSPECTRA_SAVE_FILE), '.'
             ))
+
+        codeinfo = copy.deepcopy(calcinfo.codes_info[0])
+        # codeinfo.cmdline_params = [
+        if 'parallelization' in self.inputs:
+            self.report(f'Found parallelization options: {self.inputs.parallelization.get_dict()}')
+            para_cmdline_params = []
+            for k, v in self.inputs.parallelization.get_dict().items():
+                para_cmdline_params.append(f'-{k}')
+                if isinstance(v, bool):
+                    para_cmdline_params.append(f'.{str(v).lower()}.')
+                else:
+                    para_cmdline_params.append(str(v))
+
+            codeinfo.cmdline_params += para_cmdline_params
+
+        calcinfo.codes_info = [codeinfo]
+
         return calcinfo

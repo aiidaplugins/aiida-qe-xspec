@@ -19,6 +19,7 @@ def update_resources(builder, codes):
     set_component_resources(builder.core.scf.pw, codes.get('pw'))
     set_component_resources(builder.core.xs_prod.xspectra, codes.get('xspectra'))
     enable_pencil_decomposition(builder.core.scf.pw)
+    enable_pencil_decomposition(builder.core.xs_prod.xspectra)
 
 
 def get_builder(codes, structure, parameters, **kwargs):
