@@ -83,6 +83,7 @@ def get_builder(codes, structure, parameters, **kwargs):
             # parameter set ("gamma_energy(1-2)", "gamma_value(1-2)") and thus allows us to decouple spectrum
             # broadening from Lanczos broadening and avoid having to re-plot the final spectrum.
             'xs_prod': {
+                'kpoints_distance' : adv_parameters['kpoints_distance'],
                 'xspectra': {
                     'parameters': {
                         'PLOT': {
