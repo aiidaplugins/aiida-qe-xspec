@@ -9,7 +9,7 @@ from aiida.engine import calcfunction
 from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 from aiida.tools import spglib_tuple_to_structure, structure_to_spglib_tuple
 import numpy as np
-import spglib
+import spglib, copy
 
 from aiida_quantumespresso.utils.hubbard import HubbardStructureData, HubbardUtils
 
@@ -354,7 +354,7 @@ def get_xspectra_structures(structure, **kwargs):  # pylint: disable=too-many-st
 
         if not scale_unit_cell:
             multiples = [1, 1, 1]
-            new_supercell = structure
+            new_supercell = copy.deepcopy(structure)
         else:
             get_supercell_result = get_supercell(**get_supercell_inputs)
             multiples = get_supercell_result['multiples']
@@ -390,8 +390,8 @@ def get_xspectra_structures(structure, **kwargs):  # pylint: disable=too-many-st
         # the input structure in the following steps. This is done to account for the case where
         # the user has submitted an improper crystal for calculation work and doesn't want it to
         # be changed.
-        if symmetry_dataset['number'] in [1, 2] or not standardize_structure:
-            standardized_structure_node = structure
+        if symmetry_dataset.number in [1, 2] or not standardize_structure:
+            standardized_structure_node = copy.deepcopy(structure)
             structure_is_standardized = False
         else:  # otherwise, we proceed with the standardized structure.
             standardized_structure_tuple = spglib.standardize_cell(spglib_tuple, **spglib_kwargs)
@@ -405,18 +405,18 @@ def get_xspectra_structures(structure, **kwargs):  # pylint: disable=too-many-st
 
         get_supercell_inputs['structure'] = standardized_structure_node
         get_supercell_inputs['supercell_min_parameter'] = supercell_min_parameter
-        equivalent_atoms_array = symmetry_dataset['equivalent_atoms']
+        equivalent_atoms_array = symmetry_dataset.equivalent_atoms
 
         if structure_is_standardized:
-            element_types = symmetry_dataset['std_types']
+            element_types = symmetry_dataset.std_types
         else:  # convert the 'std_types' from standardized to primitive cell
             # we generate the type-specific data on-the-fly since we need to
             # know which type (and thus kind) *should* be at each site
             # even if we "cleaned" the structure previously
             non_cleaned_dataset = spglib.get_symmetry_dataset(spglib_tuple, **spglib_kwargs)
-            spglib_std_types = non_cleaned_dataset['std_types']
-            spglib_map_to_prim = non_cleaned_dataset['mapping_to_primitive']
-            spglib_std_map_to_prim = non_cleaned_dataset['std_mapping_to_primitive']
+            spglib_std_types = non_cleaned_dataset.std_types
+            spglib_map_to_prim = non_cleaned_dataset.mapping_to_primitive
+            spglib_std_map_to_prim = non_cleaned_dataset.std_mapping_to_primitive
 
             map_std_pos_to_type = {}
             for position, atom_type in zip(spglib_std_map_to_prim, spglib_std_types):
@@ -439,8 +439,8 @@ def get_xspectra_structures(structure, **kwargs):  # pylint: disable=too-many-st
 
         output_params['equivalent_sites_data'] = equivalency_dict
 
-        output_params['spacegroup_number'] = symmetry_dataset['number']
-        output_params['international_symbol'] = symmetry_dataset['international']
+        output_params['spacegroup_number'] = symmetry_dataset.number
+        output_params['international_symbol'] = symmetry_dataset.international
 
         output_params['structure_is_standardized'] = structure_is_standardized
         if structure_is_standardized:
@@ -451,7 +451,7 @@ def get_xspectra_structures(structure, **kwargs):  # pylint: disable=too-many-st
 
         if not scale_unit_cell:
             multiples = [1, 1, 1]
-            new_supercell = standardized_structure_node
+            new_supercell = copy.deepcopy(standardized_structure_node)
         else:
             get_supercell_result = get_supercell(**get_supercell_inputs)
             multiples = get_supercell_result['multiples']
