@@ -66,6 +66,9 @@ docs = [
   'sphinx-favicon'
 ]
 
+[project.scripts]
+aiida-qe-xspec = 'aiida_qe_xspec.__main__:cli'
+
 [project.urls]
 documentation = 'https://aiida-qe-xspec.readthedocs.io/'
 homepage = 'https://github.com/aiidaplugins/aiida-qe-xspec'
