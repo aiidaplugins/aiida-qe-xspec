@@ -4,7 +4,7 @@ requires = ['flit_core>=3.4,<4']
 
 [project]
 authors = [
-  {name = 'aiida-qe-xspec team'}
+  { name = 'aiida-qe-xspec team' }
 ]
 classifiers = [
   'Development Status :: 4 - Beta',
@@ -13,23 +13,20 @@ classifiers = [
   'Operating System :: POSIX :: Linux',
   'Operating System :: MacOS :: MacOS X',
   'Programming Language :: Python',
-  'Programming Language :: Python :: 3.9',
-  'Programming Language :: Python :: 3.10',
-  'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
   'Topic :: Scientific/Engineering'
 ]
 dependencies = [
-  'aiida-core>=2.6',
-  'aiida-quantumespresso==4.12.1',
+  'aiida-core>=2.8,<3',
+  'aiida-quantumespresso>=5,<6',
   'gitpython'
 ]
 dynamic = ['description', 'version']
 keywords = ['aiida', 'workflows', 'core-level', 'spectroscopy']
-license = {file = 'LICENSE'}
+license = { file = 'LICENSE' }
 name = 'aiida-qe-xspec'
 readme = 'README.md'
-requires-python = '>=3.9'
+requires-python = '>=3.12'
 
 [project.entry-points.'aiida.calculations']
 "xspec.xspectra" = "aiida_qe_xspec.calculations.xspectra:XspectraCalculation"
@@ -53,7 +50,7 @@ requires-python = '>=3.9'
 dev = [
   'mypy==1.6.1',
   'pre-commit',
-  'pytest~=6.2',
+  'pytest~=8.4',
   'pytest-regressions'
 ]
 docs = [
@@ -107,6 +104,9 @@ module = [
 filterwarnings = [
   'ignore:Creating AiiDA configuration folder.*:UserWarning',
   'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning'
+]
+markers = [
+  'integration: tests that require installed simulation codes and pseudopotentials'
 ]
 
 [tool.ruff]

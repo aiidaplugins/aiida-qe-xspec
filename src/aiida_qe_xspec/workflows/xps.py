@@ -159,7 +159,7 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
         spec.expose_inputs(
             PwRelaxWorkChain,
             namespace='relax',
-            exclude=('structure', 'clean_workdir', 'base_final_scf'),
+            exclude=('structure', 'clean_workdir'),
             namespace_options={
                 'help': (
                     'Input parameters for the relax process. If not specified at all, the relaxation step is skipped.'
@@ -428,7 +428,6 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
             )
             relax.pop('clean_workdir', None)
             relax.pop('structure', None)
-            relax.pop('base_final_scf', None)
 
         ch_scf = PwBaseWorkChain.get_builder_from_protocol(
             *pw_args, overrides=inputs.get('ch_scf', None), options=options, **kwargs
@@ -472,11 +471,8 @@ class XpsWorkChain(ProtocolMixin, WorkChain):
                 kpoints_mesh.set_kpoints_mesh([1, 1, 1])
                 builder.ch_scf.kpoints = kpoints_mesh
                 if relax is not None:
-                    builder.relax.base.pw.settings = orm.Dict(dict={'gamma_only': True})
-                # These are the correct input ports for v5 of AiiDA-QE, but since AiiDALab-QE requires
-                # v4.12.1 this makes the GUI part of the plugin incompatable with v5 of AiiDA-QE.
-                # builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
-                # builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                    builder.relax.base_init_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
+                    builder.relax.base_relax.pw.settings = orm.Dict(dict={'gamma_only': True})
         # pylint: enable=no-member
         return builder
 

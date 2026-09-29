@@ -1,12 +1,9 @@
-from aiida import load_profile, orm
+from aiida import orm
 
 from aiida_qe_xspec.workflows.functions.get_core_hole_inputs import get_core_hole_inputs
 from aiida_qe_xspec.workflows.functions.get_xspectra_structures import process_molecule_input
-from aiida_qe_xspec.gui.xps.workchain import _core_levels_for_atom_indices
+from aiida_qe_xspec.utils import _core_levels_for_atom_indices
 from aiida_qe_xspec.workflows.functions.get_marked_structures import get_marked_structures
-
-
-load_profile()
 
 
 def generate_formic_acid_structure():

@@ -55,7 +55,7 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
         spec.expose_inputs(
             PwRelaxWorkChain,
             namespace='relax',
-            exclude=('structure', 'clean_workdir', 'base_final_scf'),
+            exclude=('structure', 'clean_workdir'),
             namespace_options={
                 'help': (
                     'Input parameters for the relax process. If not specified at all, the relaxation step is skipped.'
@@ -320,7 +320,6 @@ class XspectraCrystalWorkChain(ProtocolMixin, WorkChain):
 
         relax.pop('clean_workdir', None)
         relax.pop('structure', None)
-        relax.pop('base_final_scf', None)
 
         core.pop('kpoints', None)
         core.pop('structure', None)

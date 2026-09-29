@@ -1,15 +1,16 @@
-from aiida import load_profile, orm
-from ase.build import bulk
-from aiida.engine import run_get_node
-from aiida_qe_xspec.workflows.xps import XpsWorkChain
 import numpy as np
+import pytest
 from aiida import orm
+from aiida.engine import run_get_node
+from ase.build import bulk
+
 from aiida_qe_xspec.utils import load_core_hole_pseudos
+from aiida_qe_xspec.workflows.xps import XpsWorkChain
 
 
+@pytest.mark.integration
 def test_solid():
     """Test the solid."""
-    load_profile()
     atoms = bulk('Si')
     structure = orm.StructureData(ase=atoms)
     code = orm.load_code('qe-7.2-pw@localhost')
@@ -47,4 +48,8 @@ def test_solid():
     )
     builder.pop('relax')
     _, node = run_get_node(builder)
-    np.isclose(node.outputs.binding_energies.get_dict()['Si']['2p']['site_0']['energy'], 99.8438, atol=1e-2)
+    assert np.isclose(
+        node.outputs.binding_energies.get_dict()['Si']['2p']['site_0']['energy'],
+        99.8438,
+        atol=1e-2,
+    )

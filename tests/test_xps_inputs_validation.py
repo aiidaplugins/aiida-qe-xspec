@@ -1,14 +1,15 @@
 import pytest
-from aiida import load_profile, orm
+from aiida import orm
 from aiida.common import ValidationError
 from aiida.engine import run
 from aiida_qe_xspec.utils import load_core_hole_pseudos
 from aiida_qe_xspec.workflows.xps import XpsWorkChain
 
-load_profile()
 
-def test_validate_get_builder_from_protocol(etfa_molecule):
-    code = orm.load_code('qe-7.2-pw@localhost')
+def test_validate_get_builder_from_protocol(
+    etfa_molecule, pw_code, sssp_family, xps_pseudo_group
+):
+    code = pw_code
     core_levels = {'C': ['1s']}
     core_hole_pseudos, correction_energies = load_core_hole_pseudos(core_levels, 'pseudo_demo_pbe')
     with pytest.raises(ValidationError, match="The following elements: {'Fe'} in `core_levels` are not present in the structure"):
@@ -87,8 +88,10 @@ def test_validate_get_builder_from_protocol(etfa_molecule):
         run(builder)
 
 
-def test_builder_allows_total_magnetization_without_starting_magnetization(etfa_molecule):
-    code = orm.load_code('qe-7.2-pw@localhost')
+def test_builder_allows_total_magnetization_without_starting_magnetization(
+    etfa_molecule, pw_code, sssp_family, xps_pseudo_group
+):
+    code = pw_code
     core_levels = {'C': ['1s']}
     core_hole_pseudos, correction_energies = load_core_hole_pseudos(core_levels, 'pseudo_demo_pbe')
 
@@ -117,3 +120,29 @@ def test_builder_allows_total_magnetization_without_starting_magnetization(etfa_
     assert system['nspin'] == 2
     assert system['tot_magnetization'] == 1
     assert 'starting_magnetization' not in system
+
+
+def test_molecular_relax_uses_qe5_namespaces(
+    etfa_molecule, pw_code, sssp_family, xps_pseudo_group
+):
+    """Molecular relax inputs use the namespaces introduced in AiiDA-QE 5."""
+    core_levels = {'C': ['1s']}
+    core_hole_pseudos, correction_energies = load_core_hole_pseudos(core_levels, 'pseudo_demo_pbe')
+
+    builder = XpsWorkChain.get_builder_from_protocol(
+        structure=etfa_molecule,
+        code=pw_code,
+        core_hole_pseudos=core_hole_pseudos,
+        core_levels=core_levels,
+        correction_energies=orm.Dict(correction_energies),
+        structure_preparation_settings={
+            'is_molecule_input': orm.Bool(True),
+        },
+        overrides={
+            'relax': {},
+        },
+    )
+
+    assert 'base' not in builder.relax
+    assert builder.relax.base_init_relax.pw.settings.get_dict() == {'gamma_only': True}
+    assert builder.relax.base_relax.pw.settings.get_dict() == {'gamma_only': True}

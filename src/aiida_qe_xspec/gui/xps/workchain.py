@@ -1,9 +1,8 @@
-from aiida.common import ValidationError
 from aiida.orm import Bool, Dict, Float, Group
 from aiida.plugins import WorkflowFactory
 from aiida_quantumespresso.common.types import ElectronicType, SpinType
 from aiida_qe_xspec.workflows.xps import XpsWorkChain
-from aiida_qe_xspec.utils import load_core_hole_pseudos
+from aiida_qe_xspec.utils import _core_levels_for_atom_indices, load_core_hole_pseudos
 from aiidalab_qe.utils import (
     enable_pencil_decomposition,
     set_component_resources,
@@ -17,36 +16,6 @@ supercell_min_parameter_map = {
 }
 
 
-def _core_levels_for_atom_indices(structure, atom_indices, pseudo_group):
-    """Return zero-based atom indices and supported core levels for selected one-based UI indices."""
-    if not atom_indices:
-        return atom_indices, {}
-
-    correction_energies = pseudo_group.base.extras.get('correction', {})
-    supported_core_levels = {}
-    for key in correction_energies:
-        element, orbital = key.split('_', maxsplit=1)
-        supported_core_levels.setdefault(element, []).append(orbital)
-
-    zero_based_indices = []
-    core_levels = {}
-    num_sites = len(structure.sites)
-    for index in atom_indices:
-        if index < 1 or index > num_sites:
-            raise ValidationError(
-                f'Atom index {index} is out of range. Use one-based indices between 1 and {num_sites}.'
-            )
-        zero_based_index = index - 1
-        zero_based_indices.append(zero_based_index)
-        kind = structure.get_kind(structure.sites[zero_based_index].kind_name)
-        element = kind.symbol
-        if element not in supported_core_levels:
-            raise ValidationError(
-                f'Element {element} for atom index {index} is not supported by pseudo group {pseudo_group.label}.'
-            )
-        core_levels.setdefault(element, supported_core_levels[element])
-
-    return zero_based_indices, core_levels
 
 def update_resources(builder, codes):
     """Update the resources for the builder."""
