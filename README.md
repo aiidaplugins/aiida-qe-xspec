@@ -19,6 +19,15 @@ To install AiiDA QE Xspec, ensure you have AiiDA and Quantum ESPRESSO set up, th
 pip install aiida-qe-xspec
 ```
 
+## Compatibility
+
+| AiiDA QE Xspec | AiiDA Quantum ESPRESSO | AiiDA Core | Python |
+| --- | --- | --- | --- |
+| `0.4.x` | `>=5,<6` | `>=2.8,<3` | `>=3.12` |
+| `0.3.x` | `4.12.1` | `>=2.6` | `>=3.9` |
+
+The `support/0.3.x` branch remains available for older AiiDAlab installations that require AiiDA Quantum ESPRESSO 4.12.1.
+
 ## Usage
 Please refer to the [documentation](https://aiida-qe-xspec.readthedocs.io) for detailed instructions on how to use AiiDA QE Xspec.
 

@@ -11,6 +11,38 @@ BASE_URL = 'https://github.com/superstar54/xps-data/raw/main/pseudo_demo/'
 base_data_folder = Path.home().joinpath('.aiidalab', 'aiida-qe-xspec', 'data')
 
 
+def _core_levels_for_atom_indices(structure, atom_indices, pseudo_group):
+    """Return zero-based atom indices and supported core levels for selected one-based UI indices."""
+    if not atom_indices:
+        return atom_indices, {}
+
+    correction_energies = pseudo_group.base.extras.get('correction', {})
+    supported_core_levels = {}
+    for key in correction_energies:
+        element, orbital = key.split('_', maxsplit=1)
+        supported_core_levels.setdefault(element, []).append(orbital)
+
+    zero_based_indices = []
+    core_levels = {}
+    num_sites = len(structure.sites)
+    for index in atom_indices:
+        if index < 1 or index > num_sites:
+            raise exceptions.ValidationError(
+                f'Atom index {index} is out of range. Use one-based indices between 1 and {num_sites}.'
+            )
+        zero_based_index = index - 1
+        zero_based_indices.append(zero_based_index)
+        kind = structure.get_kind(structure.sites[zero_based_index].kind_name)
+        element = kind.symbol
+        if element not in supported_core_levels:
+            raise exceptions.ValidationError(
+                f'Element {element} for atom index {index} is not supported by pseudo group {pseudo_group.label}.'
+            )
+        core_levels.setdefault(element, supported_core_levels[element])
+
+    return zero_based_indices, core_levels
+
+
 def load_core_hole_pseudos(core_levels, pseudo_group='pseudo_demo_pbe'):
     """Load the core hole pseudos for the given core levels and pseudo group."""
     pseudo_group = orm.QueryBuilder().append(orm.Group, filters={'label': pseudo_group}).one()[0]
