@@ -241,8 +241,13 @@ class XpsConfigurationSettingsPanel(
             return
 
         children = []
-        elements = self._model.input_structure.get_symbols_set()
-        supported_core_levels = self._model.get_supported_core_levels()
+
+        if self._model.has_structure:
+            elements = self._model.input_structure.get_symbols_set()
+            supported_core_levels = self._model.get_supported_core_levels()
+        else:
+            elements = []
+            supported_core_levels = {}
 
         for element in elements:
             if element in supported_core_levels:
