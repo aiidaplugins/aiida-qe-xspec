@@ -4,7 +4,7 @@ from scipy.interpolate import make_interp_spline
 
 from aiidalab_qe.common.panel import ResultsModel
 
-from .utils import broaden_xas, export_xas_data, get_aligned_spectra
+from .utils import _trapezoid, broaden_xas, export_xas_data, get_aligned_spectra
 
 
 class XasResultsModel(ResultsModel):
@@ -80,7 +80,7 @@ class XasResultsModel(ResultsModel):
         final_x_vals = final_spectrum[:, 0]
         final_y_vals = final_spectrum[:, 1]
         final_spectrum_spline = make_interp_spline(final_x_vals, final_y_vals)
-        integral = np.trapz(final_spectrum_spline(final_x_vals), final_x_vals)
+        integral = _trapezoid(final_spectrum_spline(final_x_vals), final_x_vals)
         final_norm_y = final_spectrum_spline(final_x_vals) / integral
 
         spectra = [
