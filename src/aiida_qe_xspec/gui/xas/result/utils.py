@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.interpolate import make_interp_spline
 
+_trapezoid = np.trapezoid if hasattr(np, 'trapezoid') else np.trapz
+
 
 def write_csv(dataset):
     from pandas import DataFrame
@@ -149,7 +151,7 @@ def get_aligned_spectra(core_wc_dict, equivalent_sites_dict):
         spectrum_x = spectrum_node.get_x()[1]
         spectrum_y = spectrum_node.get_y()[0][1]
         spline = make_interp_spline(spectrum_x, spectrum_y)
-        norm_y = spline(spectrum_x) / np.trapz(spline(spectrum_x), spectrum_x)
+        norm_y = spline(spectrum_x) / _trapezoid(spline(spectrum_x), spectrum_x)
         weighted_spectrum = np.column_stack(
             (spectrum_x, norm_y * (site_multiplicity / total_multiplicity))
         )
