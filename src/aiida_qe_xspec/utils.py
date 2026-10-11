@@ -57,8 +57,11 @@ def load_core_hole_pseudos(core_levels, pseudo_group='pseudo_demo_pbe'):
         for orbital in core_levels[element]:
             label = f'{element}_{orbital}'
             pseudos[element][orbital] = next(pseudo for pseudo in pseudo_group.nodes if pseudo.label == label)
-            correction_energies[element][orbital] = all_correction_energies[label]['core'] - all_correction_energies[label]['exp']
+            correction_energies[element][orbital] = (
+                all_correction_energies[label]['core'] - all_correction_energies[label]['exp']
+            )
     return pseudos, correction_energies
+
 
 def download_data():
     print(f'Downloading data...')
@@ -76,6 +79,7 @@ def download_data():
     shutil.copytree(src, base_data_folder)
     shutil.rmtree(clone_dir)
 
+
 def pseudo_group_exists(group_label):
     groups = (
         orm.QueryBuilder()
@@ -86,6 +90,7 @@ def pseudo_group_exists(group_label):
         .all(flat=True)
     )
     return len(groups) > 0 and len(groups[0].nodes) > 0
+
 
 def get_pseudo_group(group_label):
     """Get the pseudo group with the given label.
@@ -104,6 +109,7 @@ def get_pseudo_group(group_label):
     else:
         group = groups[0]
     return group
+
 
 def import_node_from_file(file_path, group, label=None, filename=None, upf=True):
     """Check if the node already exists in the group.
@@ -143,10 +149,11 @@ def install_xps_pseudos():
             import_node_from_file(file_path, group, label=f'{element}_gs')
             for core_level, core_data in element_data.items():
                 pseudo = core_data['pseudo']
-                ch_label=f'{element}_{core_level}'
+                ch_label = f'{element}_{core_level}'
                 import_node_from_file(xps_folder.joinpath(group_label, core_level, pseudo), group, ch_label)
                 corrections[ch_label] = {'core': core_data['core'], 'exp': core_data['exp']}
         group.base.extras.set('correction', corrections)
+
 
 def install_xas_pseudos():
     core_wfc_dir = 'core_wfc_data'
@@ -174,3 +181,77 @@ def install_xas_pseudos():
             print(f"element '{core_level}'...")
             for element, pseudo in data.items():
                 import_node_from_file(ch_pseudo_dir.joinpath(pseudo), group, label=pseudo)
+
+
+def verify_setup():
+    """Verify downloaded data and imported XPS/XAS pseudo groups."""
+    failures = []
+    xps_folder = base_data_folder.joinpath('xps')
+    xas_folder = base_data_folder.joinpath('xas')
+    xps_data_path = xps_folder.joinpath('data.yaml')
+    xas_data_path = xas_folder.joinpath('data.yaml')
+
+    if not xps_data_path.is_file():
+        failures.append(f'Missing downloaded XPS data manifest: {xps_data_path}')
+
+    if not xas_data_path.is_file():
+        failures.append(f'Missing downloaded XAS data manifest: {xas_data_path}')
+
+    if failures:
+        raise RuntimeError('; '.join(failures))
+
+    try:
+        with xps_data_path.open(encoding='utf-8') as handle:
+            xps_data = yaml.safe_load(handle)
+
+        with xas_data_path.open(encoding='utf-8') as handle:
+            xas_data = yaml.safe_load(handle)
+    except Exception as exc:
+        failures.append(f'Failed to read XPS/XAS data manifests: {exc}')
+
+    if failures:
+        raise RuntimeError('; '.join(failures))
+
+    def check_group(group_label, required_labels, correction_labels=()):
+        groups = orm.QueryBuilder().append(orm.Group, filters={'label': group_label}).all(flat=True)
+        if not groups:
+            failures.append(f'Missing AiiDA pseudo group {group_label!r}')
+            return
+
+        group = groups[0]
+        node_labels = {node.label for node in group.nodes}
+        missing_labels = set(required_labels) - node_labels
+        if missing_labels:
+            failures.append(f'Pseudo group {group_label!r} is missing nodes: {", ".join(sorted(missing_labels))}')
+
+        corrections = group.base.extras.get('correction', {})
+        missing_corrections = set(correction_labels) - set(corrections)
+        if missing_corrections:
+            failures.append(
+                f'Pseudo group {group_label!r} is missing correction data for: {", ".join(sorted(missing_corrections))}'
+            )
+
+    for group_label, group_data in xps_data.items():
+        required_labels = set()
+        correction_labels = set()
+
+        for element, element_data in group_data.items():
+            required_labels.add(f'{element}_gs')
+            for core_level in element_data.keys() - {'ground'}:
+                label = f'{element}_{core_level}'
+                required_labels.add(label)
+                correction_labels.add(label)
+
+        check_group(f'xps_{group_label}', required_labels, correction_labels)
+
+    for group_label, group_data in xas_data['pseudos'].items():
+        required_labels = set(group_data['gipaw_pseudos'].values())
+        required_labels.update(group_data['core_wavefunction_data'].values())
+
+        for pseudo_map in group_data['core_hole_pseudos'].values():
+            required_labels.update(pseudo_map.values())
+
+        check_group(f'xas_{group_label}', required_labels)
+
+    if failures:
+        raise RuntimeError('; '.join(failures))
