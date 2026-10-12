@@ -1,5 +1,4 @@
-"""Command line interface for the aiida-qe-xspec package.
-"""
+"""Command line interface for the aiida-qe-xspec package."""
 
 from aiida import load_profile
 import click
@@ -18,9 +17,7 @@ def setup_pseudos():
     install_xps_pseudos()
 
 
-@cli.command(
-    help='Set up core-hole pseudo-potential'
-)
+@cli.command(help='Set up core-hole pseudo-potential')
 def post_install():
     from aiida_qe_xspec.utils import download_data, install_xps_pseudos, install_xas_pseudos
 
@@ -28,6 +25,19 @@ def post_install():
     download_data()
     install_xps_pseudos()
     install_xas_pseudos()
+
+
+@cli.command(help='Verify downloaded data and imported pseudopotentials.')
+@click.option('-p', '--profile', default='default', help='AiiDA profile name.')
+def verify_post_install(profile):
+    from aiida_qe_xspec.utils import verify_setup
+
+    load_profile(profile)
+    try:
+        verify_setup()
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo('XSpec post-install setup is valid.')
 
 
 if __name__ == '__main__':
