@@ -42,9 +42,9 @@ requires-python = '>=3.12'
 "xspec.xspectra.core" = "aiida_qe_xspec.workflows.xspectra.core:XspectraCoreWorkChain"
 "xspec.xspectra.crystal" = "aiida_qe_xspec.workflows.xspectra.crystal:XspectraCrystalWorkChain"
 
-[project.entry-points."aiidalab_qe.properties"]
-"xas" = "aiida_qe_xspec.gui.xas:xas"
-"xps" = "aiida_qe_xspec.gui.xps:xps"
+[project.entry-points."aiidalab_qe.plugins"]
+"xas" = "aiida_qe_xspec.gui.xas:XasPlugin"
+"xps" = "aiida_qe_xspec.gui.xps:XpsPlugin"
 
 [project.optional-dependencies]
 dev = [
@@ -112,7 +112,10 @@ markers = [
 [tool.ruff]
 ignore = [
   'D203',  # Incompatible with D211 `no-blank-line-before-class`
-  'D213'  # Incompatible with D212 `multi-line-summary-second-line`
+  'D213',  # Incompatible with D212 `multi-line-summary-second-line`
+  'D101',  # Missing docstring in public class
+  'D102',  # Missing docstring in public method
+  'PLC0415'  # Imports are inside methods to defer feature loading until requested
 ]
 line-length = 120
 select = [

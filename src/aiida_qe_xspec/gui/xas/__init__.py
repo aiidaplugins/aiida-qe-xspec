@@ -1,35 +1,44 @@
-from importlib import resources as importlib_resources
+"""AiiDAlab QE plugin for X-ray absorption spectroscopy (XAS)."""
 
-import yaml
-
-from aiidalab_qe.common.panel import PluginOutline
-from aiida_qe_xspec.gui import xas as xas_folder
-
-from .model import XasConfigurationSettingsModel
-from .resources import XasResourceSettingsModel, XasResourceSettingsPanel
-from .result import XasResultsModel, XasResultsPanel
-from .setting import XasConfigurationSettingsPanel
-from .structure_examples import structure_examples
-from .workchain import workchain_and_builder
-
-class XasPluginOutline(PluginOutline):
-    title = 'X-ray absorption spectroscopy (XAS)'
+from aiidalab_qe.plugins import QeAppPlugin
 
 
-xas = {
-    'outline': XasPluginOutline,
-    'structure_examples': structure_examples,
-    'configuration': {
-        'panel': XasConfigurationSettingsPanel,
-        'model': XasConfigurationSettingsModel,
-    },
-    'resources': {
-        'panel': XasResourceSettingsPanel,
-        'model': XasResourceSettingsModel,
-    },
-    'result': {
-        'panel': XasResultsPanel,
-        'model': XasResultsModel,
-    },
-    'workchain': workchain_and_builder,
-}
+class XasPlugin(QeAppPlugin):
+    @property
+    def outline(self) -> str:
+        return 'X-ray absorption spectroscopy (XAS)'
+
+    def structure_examples(self):
+        from .structure_examples import structure_examples
+
+        return structure_examples
+
+    def configuration(self):
+        from .model import XasConfigurationSettingsModel
+        from .setting import XasConfigurationSettingsPanel
+
+        return {
+            'panel': XasConfigurationSettingsPanel,
+            'model': XasConfigurationSettingsModel,
+        }
+
+    def resources(self):
+        from .resources import XasResourceSettingsModel, XasResourceSettingsPanel
+
+        return {
+            'panel': XasResourceSettingsPanel,
+            'model': XasResourceSettingsModel,
+        }
+
+    def result(self):
+        from .result import XasResultsModel, XasResultsPanel
+
+        return {
+            'panel': XasResultsPanel,
+            'model': XasResultsModel,
+        }
+
+    def workchain(self):
+        from .workchain import workchain_and_builder
+
+        return workchain_and_builder
