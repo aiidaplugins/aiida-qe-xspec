@@ -45,7 +45,7 @@ def get_builder(codes, structure, parameters, **kwargs):
     pseudos = {e : {} for e in elements_list}
     for element in elements_list:
         for node in orm.load_group('xas_pbe').nodes:
-            if node.label in core_wfc_data_labels.values() and node.label not in core_wfc_data:
+            if node.label == core_wfc_data_labels[element]:
                 core_wfc_data[element] = node
         pseudo_nodes_for_element = {n.label : n for n in orm.load_group('xas_pbe').nodes if n.label in pseudo_labels[element].values()}
         pseudos[element]['core_hole'] = pseudo_nodes_for_element[pseudo_labels[element]['core_hole']]
