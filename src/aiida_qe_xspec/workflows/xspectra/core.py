@@ -591,12 +591,12 @@ class XspectraCoreWorkChain(ProtocolMixin, WorkChain):
         unrecoverable_failures = False  # pylint: disable=unused-variable
 
         for calculation in calculations:
-            vector = calculation.outputs.output_parameters.get_dict()['xepsilon']
             if not calculation.is_finished_ok:
-                self.report(f'XspectraBaseWorkChain <{vector}>'
-                            ' failed with exit status {calculation.exit_status}.')
+                self.report(f'XspectraBaseWorkChain <{calculation.pk}>'
+                            f' failed with exit status {calculation.exit_status}.')
                 unrecoverable_failures = True
             else:
+                vector = calculation.outputs.output_parameters.get_dict()['xepsilon']
                 self.report(f'XspectraBaseWorkChain <{vector}> finished successfully.')
                 self.ctx['finished_lanczos'].append(calculation)
         if unrecoverable_failures:
