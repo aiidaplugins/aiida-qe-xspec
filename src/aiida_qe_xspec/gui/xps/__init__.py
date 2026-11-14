@@ -1,36 +1,52 @@
-from aiidalab_qe.common.panel import PluginOutline
+"""AiiDAlab QE plugin for X-ray photoelectron spectroscopy (XPS)."""
 
-from .model import XpsConfigurationSettingsModel
-from .resources import XpsResourceSettingsModel, XpsResourceSettingsPanel
-from .result import XpsResultsModel, XpsResultsPanel
-from .setting import XpsConfigurationSettingsPanel
-from .structure_examples import structure_examples
-from .workchain import workchain_and_builder
-from pathlib import Path
+from aiidalab_qe.plugins import QeAppPlugin
 
 
-class XpsPluginOutline(PluginOutline):
-    title = 'X-ray photoelectron spectroscopy (XPS)'
+class XpsPlugin(QeAppPlugin):
+    @property
+    def outline(self) -> str:
+        return 'X-ray photoelectron spectroscopy (XPS)'
 
+    def structure_examples(self):
+        from .structure_examples import structure_examples
 
-xps = {
-    'outline': XpsPluginOutline,
-    'structure_examples': structure_examples,
-    'configuration': {
-        'panel': XpsConfigurationSettingsPanel,
-        'model': XpsConfigurationSettingsModel,
-    },
-    'resources': {
-        'panel': XpsResourceSettingsPanel,
-        'model': XpsResourceSettingsModel,
-    },
-    'result': {
-        'panel': XpsResultsPanel,
-        'model': XpsResultsModel,
-    },
-    'workchain': workchain_and_builder,
-    'guides': {
-        'title': 'XPS',
-        'path': Path(__file__).resolve().parent / 'guides',
-    },
-}
+        return structure_examples
+
+    def configuration(self):
+        from .model import XpsConfigurationSettingsModel
+        from .setting import XpsConfigurationSettingsPanel
+
+        return {
+            'panel': XpsConfigurationSettingsPanel,
+            'model': XpsConfigurationSettingsModel,
+        }
+
+    def resources(self):
+        from .resources import XpsResourceSettingsModel, XpsResourceSettingsPanel
+
+        return {
+            'panel': XpsResourceSettingsPanel,
+            'model': XpsResourceSettingsModel,
+        }
+
+    def result(self):
+        from .result import XpsResultsModel, XpsResultsPanel
+
+        return {
+            'panel': XpsResultsPanel,
+            'model': XpsResultsModel,
+        }
+
+    def workchain(self):
+        from .workchain import workchain_and_builder
+
+        return workchain_and_builder
+
+    def guides(self):
+        from pathlib import Path
+
+        return {
+            'title': 'XPS',
+            'path': Path(__file__).resolve().parent / 'guides',
+        }
