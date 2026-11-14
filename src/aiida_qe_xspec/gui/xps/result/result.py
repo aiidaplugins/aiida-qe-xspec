@@ -171,7 +171,8 @@ class XpsResultsPanel(ResultsPanel[XpsResultsModel]):
         }
 
         self.structure_view = WeasWidget(
-            guiConfig=gui_config, viewerStyle={'width': '100%', 'height': '400px'}
+            guiConfig=gui_config, viewerStyle={'width': '100%', 'height': '400px'},
+            layout=ipw.Layout(width='100%'),
         )
 
         self.results_container.children = [
